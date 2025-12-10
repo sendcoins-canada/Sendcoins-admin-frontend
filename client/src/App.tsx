@@ -7,6 +7,7 @@ import { Provider } from "react-redux";
 import { store } from "./store";
 import NotFound from "@/pages/not-found";
 
+import Login from "@/pages/Login";
 import SetupPassword from "@/pages/SetupPassword";
 import ConfirmPassword from "@/pages/ConfirmPassword";
 import Transactions from "@/pages/Transactions";
@@ -17,7 +18,8 @@ import PartnerAccounts from "@/pages/PartnerAccounts";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={SetupPassword} />
+      <Route path="/" component={Login} />
+      <Route path="/login" component={Login} />
       <Route path="/setup-password" component={SetupPassword} />
       <Route path="/confirm-password" component={ConfirmPassword} />
       <Route path="/transactions" component={Transactions} />
