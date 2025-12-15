@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/store';
+import { fetchTransactions } from '@/store/slices/transactionSlice';
 import { Filter, ExportSquare, ArrowRight2, RecordCircle, ArrowDown2 } from 'iconsax-react';
+import { Loader2 } from 'lucide-react';
 
 export default function Transactions() {
-  const transactions = useSelector((state: RootState) => state.transactions.items);
+  const dispatch = useDispatch<AppDispatch>();
+  const { items: transactions, isLoading } = useSelector((state: RootState) => state.transactions);
+
+  useEffect(() => {
+    dispatch(fetchTransactions());
+  }, [dispatch]);
 
   return (
     <DashboardLayout title="Transactions">
@@ -80,82 +87,88 @@ export default function Transactions() {
         </div>
 
         {/* Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-100">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider">
-              <tr>
-                <th className="px-6 py-4">TX ID</th>
-                <th className="px-6 py-4">Date Initiated</th>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Currency</th>
-                <th className="px-6 py-4">Amount</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Source</th>
-                <th className="px-6 py-4">Destination</th>
-                <th className="px-6 py-4">Fee</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 bg-white">
-              {transactions.map((tx) => (
-                <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{tx.txId}</td>
-                  <td className="px-6 py-4 text-gray-500">{tx.date}</td>
-                  <td className="px-6 py-4 text-gray-600">
-                    <div className="flex items-center gap-2 border border-gray-200 rounded-full px-2 py-1 w-fit text-xs">
-                      <ExportSquare size="12" />
-                      {tx.type}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center text-[8px] text-white font-bold">
-                        {tx.currency[0]}
-                      </div>
-                      {tx.currency}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-medium">{tx.amount}</div>
-                    <div className="text-xs text-gray-400">{tx.amountUsd}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                      tx.status === 'Completed' ? 'text-green-700 bg-green-50' : 
-                      tx.status === 'Pending' ? 'text-yellow-700 bg-yellow-50' : 'text-red-700 bg-red-50'
-                    }`}>
-                      {tx.status}
-                      <ArrowDown2 size="10" />
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-[8px]">₿</div>
-                      <div>
-                        <div className="font-medium text-xs">{tx.source.address}</div>
-                        <div className="text-[10px] text-gray-400">{tx.source.network}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-[8px]">🏦</div>
-                      <div>
-                        <div className="font-medium text-xs">{tx.destination.name}</div>
-                        <div className="text-[10px] text-gray-400">{tx.destination.account}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">{tx.fee}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-1 hover:bg-gray-100 rounded-full text-gray-400">
-                      <RecordCircle size="16" />
-                    </button>
-                  </td>
+        <div className="overflow-hidden rounded-xl border border-gray-100 min-h-[400px]">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">TX ID</th>
+                  <th className="px-6 py-4">Date Initiated</th>
+                  <th className="px-6 py-4">Type</th>
+                  <th className="px-6 py-4">Currency</th>
+                  <th className="px-6 py-4">Amount</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Source</th>
+                  <th className="px-6 py-4">Destination</th>
+                  <th className="px-6 py-4">Fee</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50 bg-white">
+                {transactions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">{tx.txId}</td>
+                    <td className="px-6 py-4 text-gray-500">{tx.date}</td>
+                    <td className="px-6 py-4 text-gray-600">
+                      <div className="flex items-center gap-2 border border-gray-200 rounded-full px-2 py-1 w-fit text-xs">
+                        <ExportSquare size="12" />
+                        {tx.type}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center text-[8px] text-white font-bold">
+                          {tx.currency[0]}
+                        </div>
+                        {tx.currency}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-medium">{tx.amount}</div>
+                      <div className="text-xs text-gray-400">{tx.amountUsd}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                        tx.status === 'Completed' ? 'text-green-700 bg-green-50' : 
+                        tx.status === 'Pending' ? 'text-yellow-700 bg-yellow-50' : 'text-red-700 bg-red-50'
+                      }`}>
+                        {tx.status}
+                        <ArrowDown2 size="10" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-[8px]">₿</div>
+                        <div>
+                          <div className="font-medium text-xs">{tx.source.address}</div>
+                          <div className="text-[10px] text-gray-400">{tx.source.network}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-[8px]">🏦</div>
+                        <div>
+                          <div className="font-medium text-xs">{tx.destination.name}</div>
+                          <div className="text-[10px] text-gray-400">{tx.destination.account}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">{tx.fee}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-1 hover:bg-gray-100 rounded-full text-gray-400">
+                        <RecordCircle size="16" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </DashboardLayout>

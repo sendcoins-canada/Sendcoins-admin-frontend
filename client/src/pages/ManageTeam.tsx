@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/store';
+import { fetchTeamMembers } from '@/store/slices/teamSlice';
 import { Filter, Add, RecordCircle } from 'iconsax-react';
+import { Loader2 } from 'lucide-react';
 
 export default function ManageTeam() {
-  const team = useSelector((state: RootState) => state.team.members);
+  const dispatch = useDispatch<AppDispatch>();
+  const { members: team, isLoading } = useSelector((state: RootState) => state.team);
+
+  useEffect(() => {
+    dispatch(fetchTeamMembers());
+  }, [dispatch]);
 
   return (
     <DashboardLayout title="Manage Team">
@@ -53,69 +60,77 @@ export default function ManageTeam() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider">
-            <tr>
-              <th className="px-6 py-4 w-10">
-                <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-              </th>
-              <th className="px-6 py-4">Member</th>
-              <th className="px-6 py-4">Role</th>
-              <th className="px-6 py-4">Department</th>
-              <th className="px-6 py-4">Last Active</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {team.map((member) => (
-              <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <img src={member.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
-                    <div>
-                      <div className="font-medium text-gray-900">{member.name}</div>
-                      <div className="text-xs text-gray-500">{member.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2 text-blue-600 font-medium text-xs">
-                    <div className="w-4 h-4 rounded-full border border-blue-200 flex items-center justify-center text-[8px]">👤</div>
-                    {member.role}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-gray-600">{member.department}</td>
-                <td className="px-6 py-4 text-gray-600">{member.lastActive}</td>
-                <td className="px-6 py-4">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-green-700 bg-green-50">
-                    {member.status}
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="p-1 hover:bg-gray-100 rounded-full text-gray-400">
-                    <RecordCircle size="16" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        
-        <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between text-sm text-gray-500">
-          <div>Page 1 of 5</div>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">Previous</button>
-            <button className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Next</button>
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white min-h-[400px]">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           </div>
-        </div>
+        ) : (
+          <>
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider">
+                <tr>
+                  <th className="px-6 py-4 w-10">
+                    <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  </th>
+                  <th className="px-6 py-4">Member</th>
+                  <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Department</th>
+                  <th className="px-6 py-4">Last Active</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {team.map((member) => (
+                  <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <img src={member.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
+                        <div>
+                          <div className="font-medium text-gray-900">{member.name}</div>
+                          <div className="text-xs text-gray-500">{member.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-blue-600 font-medium text-xs">
+                        <div className="w-4 h-4 rounded-full border border-blue-200 flex items-center justify-center text-[8px]">👤</div>
+                        {member.role}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">{member.department}</td>
+                    <td className="px-6 py-4 text-gray-600">{member.lastActive}</td>
+                    <td className="px-6 py-4">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-green-700 bg-green-50">
+                        {member.status}
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-1 hover:bg-gray-100 rounded-full text-gray-400">
+                        <RecordCircle size="16" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between text-sm text-gray-500">
+              <div>Page 1 of 5</div>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">Previous</button>
+                <button className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Next</button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

@@ -1,20 +1,27 @@
 import React, { useState } from 'react';
 import { Eye, EyeSlash, Sms } from 'iconsax-react';
 import { Link, useLocation } from 'wouter';
-import { useDispatch } from 'react-redux';
-import { login } from '@/store/slices/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginUser } from '@/store/slices/authSlice';
+import { AppDispatch, RootState } from '@/store';
+import { Loader2 } from 'lucide-react';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [, setLocation] = useLocation();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
+  
+  const { isLoading, error } = useSelector((state: RootState) => state.auth);
 
-  const handleLogin = () => {
-    // Simulate login
-    dispatch(login({ name: 'Demo User', email: email || 'demo@example.com' }));
-    setLocation('/dashboard');
+  const handleLogin = async () => {
+    try {
+      await dispatch(loginUser({ email: email || 'demo@example.com' })).unwrap();
+      setLocation('/dashboard');
+    } catch (err) {
+      // Error is handled in redux state
+    }
   };
 
   return (
@@ -72,6 +79,12 @@ export default function Login() {
             </div>
           </div>
 
+          {error && (
+            <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-sm">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
@@ -82,9 +95,17 @@ export default function Login() {
 
           <button 
             onClick={handleLogin}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98]"
+            disabled={isLoading}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Sign in
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              'Sign in'
+            )}
           </button>
 
           <div className="text-center text-sm text-gray-500">
