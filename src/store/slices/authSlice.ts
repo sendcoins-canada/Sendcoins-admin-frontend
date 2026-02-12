@@ -1,81 +1,177 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import {
-  authService,
-  LoginCredentials,
-  User,
-} from "../../services/authService";
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { RootState } from '../index';
+import type { AdminUser, Permission } from '../../types/auth';
+
+// =============================================================================
+// Types
+// =============================================================================
 
 interface AuthState {
+  // Core auth state
   isAuthenticated: boolean;
-  user: User | null;
+  isInitialized: boolean; // Has the app checked auth status on startup?
+  user: AdminUser | null;
   token: string | null;
+
+  // MFA state
+  requiresMfa: boolean;
+  mfaToken: string | null; // Temporary token for MFA verification
+
+  // UI state
   isLoading: boolean;
   error: string | null;
 }
 
+// =============================================================================
+// Initial State
+// =============================================================================
+
 const initialState: AuthState = {
   isAuthenticated: false,
+  isInitialized: false,
   user: null,
-  token: localStorage.getItem("token"),
+  token: localStorage.getItem('auth_token'),
+
+  requiresMfa: false,
+  mfaToken: null,
+
   isLoading: false,
   error: null,
 };
 
-// Async thunk for login
-export const loginUser = createAsyncThunk(
-  "auth/login",
-  async (credentials: LoginCredentials, { rejectWithValue }) => {
-    try {
-      const response = await authService.login(credentials);
-      return response.user; // We might want to return the whole response or just user depending on how we want to refactor the thunk vs the hook
-    } catch (error) {
-      return rejectWithValue("Login failed");
-    }
-  }
-);
+// =============================================================================
+// Slice
+// =============================================================================
 
 export const authSlice = createSlice({
-  name: "auth",
+  name: 'auth',
   initialState,
   reducers: {
+    // Set loading state
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
+    },
+
+    // Set error
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+      state.isLoading = false;
+    },
+
+    // Clear error
+    clearError: (state) => {
+      state.error = null;
+    },
+
+    // Set initialized (after checking auth on app startup)
+    setInitialized: (state, action: PayloadAction<boolean>) => {
+      state.isInitialized = action.payload;
+    },
+
+    // Set credentials after successful login
     setCredentials: (
       state,
-      action: PayloadAction<{ user: User; token: string }>
+      action: PayloadAction<{ user: AdminUser; token: string }>
     ) => {
       const { user, token } = action.payload;
       state.user = user;
       state.token = token;
       state.isAuthenticated = true;
-      localStorage.setItem("token", token);
+      state.requiresMfa = false;
+      state.mfaToken = null;
+      state.isLoading = false;
+      state.error = null;
+      localStorage.setItem('auth_token', token);
     },
+
+    // Update user data (e.g., after profile update)
+    updateUser: (state, action: PayloadAction<Partial<AdminUser>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
+
+    // Set MFA required state (after password auth, before MFA verification)
+    setMfaRequired: (state, action: PayloadAction<{ mfaToken: string }>) => {
+      state.requiresMfa = true;
+      state.mfaToken = action.payload.mfaToken;
+      state.isLoading = false;
+    },
+
+    // Clear MFA state (on cancel or back)
+    clearMfa: (state) => {
+      state.requiresMfa = false;
+      state.mfaToken = null;
+    },
+
+    // Logout
     logout: (state) => {
       state.isAuthenticated = false;
       state.user = null;
       state.token = null;
+      state.requiresMfa = false;
+      state.mfaToken = null;
       state.error = null;
-      localStorage.removeItem("token");
+      state.isLoading = false;
+      localStorage.removeItem('auth_token');
     },
-    clearError: (state) => {
-      state.error = null;
+
+    // Update token (after refresh)
+    updateToken: (state, action: PayloadAction<string>) => {
+      state.token = action.payload;
+      localStorage.setItem('auth_token', action.payload);
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(loginUser.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(loginUser.fulfilled, (state, action: PayloadAction<User>) => {
-        state.isLoading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload;
-      })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
   },
 });
 
-export const { setCredentials, logout, clearError } = authSlice.actions;
+// =============================================================================
+// Actions
+// =============================================================================
+
+export const {
+  setLoading,
+  setError,
+  clearError,
+  setInitialized,
+  setCredentials,
+  updateUser,
+  setMfaRequired,
+  clearMfa,
+  logout,
+  updateToken,
+} = authSlice.actions;
+
+// =============================================================================
+// Selectors
+// =============================================================================
+
+// Basic selectors
+export const selectAuth = (state: RootState) => state.auth;
+export const selectUser = (state: RootState) => state.auth.user;
+export const selectToken = (state: RootState) => state.auth.token;
+export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
+export const selectIsInitialized = (state: RootState) => state.auth.isInitialized;
+export const selectAuthLoading = (state: RootState) => state.auth.isLoading;
+export const selectAuthError = (state: RootState) => state.auth.error;
+
+// MFA selectors
+export const selectRequiresMfa = (state: RootState) => state.auth.requiresMfa;
+export const selectMfaToken = (state: RootState) => state.auth.mfaToken;
+
+// Permission selectors
+export const selectPermissions = (state: RootState): Permission[] =>
+  state.auth.user?.permissions ?? [];
+
+export const selectHasPermission = (permission: Permission) => (state: RootState): boolean =>
+  state.auth.user?.permissions?.includes(permission) ?? false;
+
+export const selectHasAnyPermission = (permissions: Permission[]) => (state: RootState): boolean =>
+  permissions.some((p) => state.auth.user?.permissions?.includes(p) ?? false);
+
+export const selectHasAllPermissions = (permissions: Permission[]) => (state: RootState): boolean =>
+  permissions.every((p) => state.auth.user?.permissions?.includes(p) ?? false);
+
+// Role selector
+export const selectUserRole = (state: RootState) => state.auth.user?.role;
+
 export default authSlice.reducer;

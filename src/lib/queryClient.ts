@@ -1,57 +1,100 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient } from '@tanstack/react-query';
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
-  }
-}
-
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  return res;
-}
-
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+// =============================================================================
+// Query Client Configuration
+// =============================================================================
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
+      // Don't refetch on window focus (can be annoying in admin dashboards)
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+
+      // Consider data fresh for 30 seconds
+      staleTime: 30 * 1000,
+
+      // Cache data for 5 minutes
+      gcTime: 5 * 60 * 1000,
+
+      // Retry failed requests once
+      retry: 1,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+
+      // Network error handling
+      networkMode: 'offlineFirst',
     },
     mutations: {
+      // Don't retry mutations
       retry: false,
+
+      // Network error handling
+      networkMode: 'offlineFirst',
     },
   },
 });
+
+// =============================================================================
+// Query Key Factory
+// =============================================================================
+
+export const queryKeys = {
+  // Auth
+  auth: {
+    me: ['auth', 'me'] as const,
+    sessions: ['auth', 'sessions'] as const,
+  },
+
+  // Transactions
+  transactions: {
+    all: ['transactions'] as const,
+    lists: () => [...queryKeys.transactions.all, 'list'] as const,
+    list: (filters?: object) =>
+      [...queryKeys.transactions.lists(), filters] as const,
+    details: () => [...queryKeys.transactions.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.transactions.details(), id] as const,
+    stats: () => [...queryKeys.transactions.all, 'stats'] as const,
+  },
+
+  // Users
+  users: {
+    all: ['users'] as const,
+    lists: () => [...queryKeys.users.all, 'list'] as const,
+    list: (filters?: object) => [...queryKeys.users.lists(), filters] as const,
+    details: () => [...queryKeys.users.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.users.details(), id] as const,
+    stats: () => [...queryKeys.users.all, 'stats'] as const,
+  },
+
+  // Team
+  team: {
+    all: ['team'] as const,
+    members: (filters?: object) => ['team', 'members', filters] as const,
+    member: (id: string) => ['team', 'members', id] as const,
+    roles: () => ['team', 'roles'] as const,
+    role: (id: number) => ['team', 'roles', id] as const,
+    departments: () => ['team', 'departments'] as const,
+    department: (id: number) => ['team', 'departments', id] as const,
+    permissions: () => ['team', 'permissions'] as const,
+  },
+
+  // Notifications
+  notifications: {
+    all: ['notifications'] as const,
+    list: (filters?: object) => ['notifications', 'list', filters] as const,
+    count: () => ['notifications', 'count'] as const,
+  },
+
+  // Audit logs
+  auditLogs: {
+    all: ['audit-logs'] as const,
+    list: (filters?: object) => ['audit-logs', 'list', filters] as const,
+  },
+
+  // Platform
+  platform: {
+    balance: () => ['platform', 'balance'] as const,
+    revenue: (params?: object) => ['platform', 'revenue', params] as const,
+    settings: () => ['platform', 'settings'] as const,
+    account: () => ['platform', 'account'] as const,
+  },
+};

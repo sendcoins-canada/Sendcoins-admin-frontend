@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'wouter';
-import { 
+import {
   Ghost,
   People,
   Bank,
@@ -8,8 +8,11 @@ import {
   Profile2User,
   LogoutCurve,
   SearchNormal1,
-  ArrowDown2
+  ArrowDown2,
+  DocumentText,
 } from 'iconsax-react';
+import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
+import { useAuth, useAuthState } from '@/hooks/useAuth';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -18,13 +21,26 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const [location] = useLocation();
+  const { logout, isLoggingOut } = useAuth();
+  const { user } = useAuthState();
+
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to logout?')) {
+      logout();
+    }
+  };
+
+  const getInitials = (firstName?: string, lastName?: string) => {
+    return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || 'AD';
+  };
 
   const navItems = [
     { icon: Ghost, path: '/dashboard', label: 'Home', hasNotification: true },
     { icon: People, path: '/users', label: 'Users' },
     { icon: Bank, path: '/partners', label: 'Partner Accounts' },
     { icon: Wallet, path: '/transactions', label: 'Transactions' },
-    { icon: Profile2User, path: '/team', label: 'Manage Team' },
+    { icon: Profile2User, path: '/manage-team', label: 'Manage Team' },
+    { icon: DocumentText, path: '/audit-logs', label: 'Audit Logs' },
   ];
 
   return (
@@ -65,7 +81,12 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         </nav>
 
         <div className="mt-auto">
-          <button className="p-3 text-gray-500 hover:text-red-500 transition-colors">
+          <button
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="p-3 text-gray-500 hover:text-red-500 transition-colors disabled:opacity-50"
+            title="Logout"
+          >
             <LogoutCurve size="24" color="currentColor" />
           </button>
         </div>
@@ -89,8 +110,15 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
 
             <div className="flex items-center gap-4 pl-4 border-l border-gray-100">
-              <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center font-semibold text-sm">
-                DS
+              <NotificationsDropdown />
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center font-semibold text-sm">
+                  {getInitials(user?.firstName, user?.lastName)}
+                </div>
+                <div className="hidden lg:block">
+                  <div className="text-sm font-medium text-gray-900">{user?.fullName || 'Admin'}</div>
+                  <div className="text-xs text-gray-500">{user?.roleName || 'Administrator'}</div>
+                </div>
               </div>
               <button className="p-1 hover:bg-gray-50 rounded-full">
                 <ArrowDown2 size="16" className="text-gray-400" />

@@ -1,88 +1,225 @@
-import { delay } from '../lib/api';
-import { Transaction } from '../store/slices/transactionSlice';
+/**
+ * Transaction Service
+ * Handles all transaction-related API calls
+ */
+
+import { api } from '../lib/api';
+import type {
+  Transaction,
+  TransactionDetail,
+  TransactionFilters,
+  TransactionStats,
+  FlagTransactionRequest,
+} from '../types/transaction';
+import type { PaginatedResponse } from '../types/common';
+
+// =============================================================================
+// Helper to map backend transaction to frontend format
+// =============================================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mapTransaction = (tx: any): Transaction => ({
+  id: String(tx.id),
+  txId: tx.txId || tx.reference,
+  type: tx.type?.toUpperCase() || 'OUTGOING',
+  status: tx.status?.toUpperCase() || 'PENDING',
+  currency: tx.currency?.crypto || tx.currency?.fiat || tx.currency?.display || 'USD',
+  amount: tx.amount?.crypto || tx.amount?.fiat || 0,
+  amountUsd: tx.amountUsd || tx.amount?.crypto || tx.amount?.fiat || 0,
+  fee: tx.fee || 0,
+  feeUsd: tx.feeUsd || 0,
+  source: {
+    type: tx.source?.type || 'WALLET',
+    address: tx.source?.address,
+    name: tx.source?.name,
+  },
+  destination: {
+    type: tx.destination?.type || 'EXTERNAL',
+    address: tx.destination?.address,
+    name: tx.destination?.name,
+    network: tx.destination?.network || tx.network,
+  },
+  txHash: tx.txHash,
+  blockNumber: tx.blockNumber,
+  confirmations: tx.confirmations,
+  userId: tx.userId || tx.source?.name || '',
+  userEmail: tx.userEmail || tx.source?.name || '',
+  userName: tx.userName || tx.source?.name || '',
+  isFlagged: tx.isFlagged || false,
+  flagReason: tx.flaggedReason,
+  flaggedBy: tx.flaggedBy,
+  flaggedAt: tx.flaggedAt,
+  initiatedAt: tx.dateInitiated || tx.createdAt,
+  completedAt: tx.completedAt || tx.statusUpdatedAt,
+  createdAt: tx.createdAt,
+  updatedAt: tx.updatedAt || tx.createdAt,
+});
+
+// =============================================================================
+// Transaction Service
+// =============================================================================
 
 export const transactionService = {
-  getTransactions: async (): Promise<Transaction[]> => {
-    await delay(800);
-    return [
-      {
-        id: '1',
-        txId: '902A3',
-        date: 'Nov 2, 2025, 9:30pm',
-        type: 'Outgoing',
-        currency: 'BNB',
-        amount: 'N20,000',
-        amountUsd: '-$10',
-        status: 'Completed',
-        source: { address: '0X23423', network: 'ERC 20' },
-        destination: { name: 'Dwight Schrute', account: '***9021 • First fabnk' },
-        fee: '2,000'
+  /**
+   * Get paginated list of transactions with filters
+   */
+  getTransactions: async (
+    filters?: TransactionFilters
+  ): Promise<PaginatedResponse<Transaction>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await api.get('/transactions', {
+      params: filters,
+    });
+    // Map backend response to frontend format
+    const transactions = (response.data || response.transactions || []).map(mapTransaction);
+    const pagination = response.pagination || {};
+    const total = pagination.total || transactions.length;
+    const page = pagination.page || 1;
+    const limit = pagination.limit || 20;
+    const totalPages = pagination.totalPages || Math.ceil(total / limit);
+    return {
+      data: transactions,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
       },
-      {
-        id: '2',
-        txId: '902A3',
-        date: 'Nov 2, 2025, 9:30pm',
-        type: 'Incoming',
-        currency: 'NGN',
-        amount: 'N20,000',
-        amountUsd: '-$10',
-        status: 'Pending',
-        source: { address: '0X23423', network: 'ERC 20' },
-        destination: { name: 'Dwight Schrute', account: '***9021 • First fabnk' },
-        fee: '2,000'
+    };
+  },
+
+  /**
+   * Get transaction by ID
+   */
+  getTransaction: async (id: string): Promise<TransactionDetail> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await api.get(`/transactions/${id}`);
+    const tx = response.transaction || response;
+    return {
+      ...mapTransaction(tx),
+      history: tx.history || [],
+      relatedTransactions: tx.relatedTransactions?.map(mapTransaction) || [],
+      adminNotes: tx.adminNotes || tx.notes,
+    };
+  },
+
+  /**
+   * Get transaction statistics
+   */
+  getStats: async (params?: {
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<TransactionStats> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await api.get('/transactions/stats', {
+      params,
+    });
+    // Backend returns: { totalVolume: { crypto, fiat }, completed, pending, failed, flagged, byType }
+    const completed = response.completed || 0;
+    const pending = response.pending || 0;
+    const failed = response.failed || 0;
+    const flagged = response.flagged || 0;
+    // Calculate total from individual counts since backend doesn't provide total
+    const total = completed + pending + failed;
+    // totalVolume is an object { crypto, fiat }
+    const volumeCrypto = response.totalVolume?.crypto || 0;
+    const volumeFiat = response.totalVolume?.fiat || 0;
+    return {
+      total,
+      completed,
+      pending,
+      failed,
+      flagged,
+      totalVolume: volumeCrypto,
+      totalVolumeUsd: volumeFiat,
+    };
+  },
+
+  /**
+   * Flag a transaction for review
+   */
+  flagTransaction: async (id: string, data: FlagTransactionRequest): Promise<void> => {
+    await api.post(`/transactions/${id}/flag`, data);
+  },
+
+  /**
+   * Unflag a transaction
+   */
+  unflagTransaction: async (id: string): Promise<void> => {
+    await api.delete(`/transactions/${id}/flag`);
+  },
+
+  /**
+   * Approve a flagged/pending transaction
+   */
+  approveTransaction: async (id: string, note?: string): Promise<void> => {
+    await api.post(`/transactions/${id}/approve`, { note });
+  },
+
+  /**
+   * Reject/Cancel a flagged/pending transaction
+   */
+  rejectTransaction: async (id: string, reason: string): Promise<void> => {
+    await api.post(`/transactions/${id}/cancel`, { reason });
+  },
+
+  /**
+   * Get transactions requiring approval (large transactions, flagged, etc.)
+   */
+  getPendingApprovals: async (): Promise<PaginatedResponse<Transaction>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await api.get('/transactions/pending-approvals');
+    const transactions = (response.data || response.transactions || []).map(mapTransaction);
+    const pagination = response.pagination || {};
+    return {
+      data: transactions,
+      pagination: {
+        page: pagination.page || 1,
+        limit: pagination.limit || 20,
+        total: pagination.total || transactions.length,
+        totalPages: pagination.totalPages || 1,
+        hasNext: pagination.page < pagination.totalPages,
+        hasPrev: pagination.page > 1,
       },
-      {
-        id: '3',
-        txId: '902A3',
-        date: 'Nov 2, 2025, 9:30pm',
-        type: 'Conversion',
-        currency: 'CAD',
-        amount: 'N20,000',
-        amountUsd: '-$10',
-        status: 'Completed',
-        source: { address: '0X23423', network: 'ERC 20' },
-        destination: { name: 'Dwight Schrute', account: '***9021 • First fabnk' },
-        fee: '2,000'
+    };
+  },
+
+  /**
+   * Export transactions to CSV
+   */
+  exportTransactions: async (filters?: TransactionFilters): Promise<Blob> => {
+    const response = await api.get('/transactions/export', {
+      params: filters,
+      responseType: 'blob',
+    });
+    return response as unknown as Blob;
+  },
+
+  /**
+   * Get transaction history for a specific user
+   */
+  getUserTransactions: async (
+    userId: string,
+    filters?: Omit<TransactionFilters, 'userId'>
+  ): Promise<PaginatedResponse<Transaction>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await api.get(`/users/${userId}/transactions`, { params: filters });
+    const transactions = (response.data || response.transactions || []).map(mapTransaction);
+    const pagination = response.pagination || {};
+    return {
+      data: transactions,
+      pagination: {
+        page: pagination.page || 1,
+        limit: pagination.limit || 20,
+        total: pagination.total || transactions.length,
+        totalPages: pagination.totalPages || 1,
+        hasNext: pagination.page < pagination.totalPages,
+        hasPrev: pagination.page > 1,
       },
-      {
-        id: '4',
-        txId: '902A3',
-        date: 'Nov 2, 2025, 9:30pm',
-        type: 'Outgoing',
-        currency: 'BNB',
-        amount: 'N20,000',
-        amountUsd: '-$10',
-        status: 'Completed',
-        source: { address: '0X23423', network: 'ERC 20' },
-        destination: { name: 'Dwight Schrute', account: '***9021 • First fabnk' },
-        fee: '2,000'
-      },
-      {
-        id: '5',
-        txId: '902A3',
-        date: 'Nov 2, 2025, 9:30pm',
-        type: 'Outgoing',
-        currency: 'NGN',
-        amount: 'N20,000',
-        amountUsd: '-$10',
-        status: 'Completed',
-        source: { address: '0X23423', network: 'ERC 20' },
-        destination: { name: 'Dwight Schrute', account: '***9021 • First fabnk' },
-        fee: '2,000'
-      },
-      {
-        id: '6',
-        txId: '902A3',
-        date: 'Nov 2, 2025, 9:30pm',
-        type: 'Outgoing',
-        currency: 'CAD',
-        amount: 'N20,000',
-        amountUsd: '-$10',
-        status: 'Completed',
-        source: { address: '0X23423', network: 'ERC 20' },
-        destination: { name: 'Dwight Schrute', account: '***9021 • First fabnk' },
-        fee: '2,000'
-      },
-    ];
-  }
+    };
+  },
 };
+
+export default transactionService;
