@@ -34,7 +34,7 @@ export type Permission =
 /**
  * Admin roles
  */
-export type AdminRole = 'ENGINEER' | 'OPERATOR' | 'SUPPORT' | 'MANAGER' | 'ADMIN';
+export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'ENGINEER' | 'OPERATOR' | 'SUPPORT' | 'COMPLIANCE';
 
 /**
  * Admin account status
