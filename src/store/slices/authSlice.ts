@@ -71,9 +71,9 @@ export const authSlice = createSlice({
     // Set credentials after successful login
     setCredentials: (
       state,
-      action: PayloadAction<{ user: AdminUser; token: string }>
+      action: PayloadAction<{ user: AdminUser; token: string; refreshToken?: string }>
     ) => {
-      const { user, token } = action.payload;
+      const { user, token, refreshToken } = action.payload;
       state.user = user;
       state.token = token;
       state.isAuthenticated = true;
@@ -82,6 +82,9 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       localStorage.setItem('auth_token', token);
+      if (refreshToken) {
+        localStorage.setItem('refresh_token', refreshToken);
+      }
     },
 
     // Update user data (e.g., after profile update)
@@ -114,6 +117,7 @@ export const authSlice = createSlice({
       state.error = null;
       state.isLoading = false;
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
     },
 
     // Update token (after refresh)

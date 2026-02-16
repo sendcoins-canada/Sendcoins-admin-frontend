@@ -103,7 +103,7 @@ export const useAuth = () => {
         dispatch(setMfaRequired({ mfaToken: data.mfaToken }));
       } else if (data.user && data.token) {
         // Login complete
-        dispatch(setCredentials({ user: data.user, token: data.token }));
+        dispatch(setCredentials({ user: data.user, token: data.token, refreshToken: data.refreshToken }));
         setLocation('/dashboard');
       } else {
         // Unexpected response - clear loading and set error
@@ -125,11 +125,12 @@ export const useAuth = () => {
     },
     onSuccess: (data) => {
       if (data.user && data.token) {
-        dispatch(setCredentials({ user: data.user, token: data.token }));
+        dispatch(setCredentials({ user: data.user, token: data.token, refreshToken: data.refreshToken }));
         setLocation('/dashboard');
       }
     },
     onError: (error: Error) => {
+      dispatch(setAuthLoading(false));
       dispatch(setAuthError(error.message || 'MFA verification failed'));
     },
   });

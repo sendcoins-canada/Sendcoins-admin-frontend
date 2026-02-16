@@ -112,13 +112,23 @@ api.interceptors.response.use(
 
       try {
         // Attempt to refresh token
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
         const response = await axios.post(
           `${API_BASE_URL}/auth/admin/refresh`,
-          {},
-          { withCredentials: true }
+          { refreshToken }
         );
 
         const newToken = response.data.accessToken;
+        const newRefreshToken = response.data.refreshToken;
+
+        // Store new refresh token (token rotation)
+        if (newRefreshToken) {
+          localStorage.setItem('refresh_token', newRefreshToken);
+        }
 
         // Update token in store
         const state = store.getState();
