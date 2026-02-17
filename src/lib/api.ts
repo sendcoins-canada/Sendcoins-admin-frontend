@@ -10,9 +10,19 @@ import { logout, setCredentials } from '@/store/slices/authSlice';
 // =============================================================================
 // Configuration
 // =============================================================================
-
+// In production (e.g. Vercel), you MUST set VITE_API_URL to your admin backend
+// API base URL. If unset, the fallback was incorrectly the frontend URL, which
+// caused 404 NOT_FOUND on login and all API calls.
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'https://sendcoins-admin.vercel.app';
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:4005' : '');
+
+if (!import.meta.env.DEV && !API_BASE_URL) {
+  console.error(
+    '[Sendcoins Admin] VITE_API_URL is not set. Set it in Vercel (or your host) to your admin backend API base URL (e.g. https://your-admin-api.vercel.app).'
+  );
+}
+
 const TIMEOUT = 30000; // 30 seconds
 
 // =============================================================================
