@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useTransactions, useTransactionStats, useExportTransactions } from '@/hooks/useTransactions';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -16,6 +16,7 @@ import {
   ArrowDown,
   ArrowSwapHorizontal,
 } from 'iconsax-react';
+import { toast } from 'sonner';
 import type { TransactionType, TransactionStatus, TransactionFilters } from '@/types/transaction';
 
 // =============================================================================
@@ -111,8 +112,16 @@ export default function Transactions() {
     data: transactionsData,
     isLoading,
     isFetching,
+    isError,
+    error,
     refetch,
   } = useTransactions({ ...filters, page, limit: 20 });
+
+  useEffect(() => {
+    if (isError && error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load transactions');
+    }
+  }, [isError, error]);
 
   // Fetch stats
   const { data: stats } = useTransactionStats();

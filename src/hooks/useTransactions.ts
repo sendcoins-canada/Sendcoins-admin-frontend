@@ -4,6 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { transactionService } from '../services/transactionService';
 import { queryKeys } from '../lib/queryClient';
 import type { TransactionFilters, FlagTransactionRequest } from '../types/transaction';
@@ -147,6 +148,9 @@ export const useExportTransactions = () => {
   return useMutation({
     mutationFn: (filters?: TransactionFilters) =>
       transactionService.exportTransactions(filters),
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Failed to export transactions');
+    },
     onSuccess: (blob) => {
       // Trigger download
       const url = window.URL.createObjectURL(blob);

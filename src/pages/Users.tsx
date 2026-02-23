@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useUsers, useUserStats, useExportUsers } from '@/hooks/useUsers';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -18,6 +18,7 @@ import {
   DocumentDownload,
   Warning2,
 } from 'iconsax-react';
+import { toast } from 'sonner';
 import type { UserStatus, KycStatus, UserFilters } from '@/types/user';
 
 // =============================================================================
@@ -113,8 +114,16 @@ export default function Users() {
     data: usersData,
     isLoading,
     isFetching,
+    isError,
+    error,
     refetch,
   } = useUsers({ ...filters, page, limit: 20 });
+
+  useEffect(() => {
+    if (isError && error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load users');
+    }
+  }, [isError, error]);
 
   // Fetch stats
   const { data: stats } = useUserStats();
@@ -227,7 +236,11 @@ export default function Users() {
             <DocumentDownload size="16" />
             Export
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-full flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+          <button
+            disabled
+            title="Coming soon – users register via the platform"
+            className="px-4 py-2 bg-gray-200 text-gray-500 text-sm font-medium rounded-full flex items-center gap-2 cursor-not-allowed"
+          >
             <Add size="16" />
             Add new user
           </button>

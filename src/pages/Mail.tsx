@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 
 type RecipientFilter = 'all' | 'admin' | 'users';
 
@@ -43,9 +44,7 @@ export default function Mail() {
   const [bccInput, setBccInput] = useState('');
   const [subject, setSubject] = useState('');
   const [fromName, setFromName] = useState('');
-  const [bodyText, setBodyText] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
-  const [useHtml, setUseHtml] = useState(false);
   const [page, setPage] = useState(1);
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [viewingEmail, setViewingEmail] = useState<SentEmailRecord | null>(null);
@@ -130,7 +129,6 @@ export default function Mail() {
         setCcInput('');
         setBccInput('');
         setSubject('');
-        setBodyText('');
         setBodyHtml('');
         setSelectedRecipients([]);
       } else {
@@ -169,8 +167,10 @@ export default function Mail() {
     const bcc = parseEmails(bccInput);
     if (cc.length) payload.cc = cc;
     if (bcc.length) payload.bcc = bcc;
-    if (useHtml && bodyHtml.trim()) payload.bodyHtml = bodyHtml.trim();
-    else if (bodyText.trim()) payload.bodyText = bodyText.trim();
+    const trimmedBody = bodyHtml.trim();
+    if (trimmedBody && trimmedBody !== '<p></p>' && trimmedBody !== '<p><br></p>') {
+      payload.bodyHtml = trimmedBody;
+    }
     sendMutation.mutate(payload);
   };
 
@@ -355,36 +355,14 @@ export default function Mail() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <div className="md:col-span-1 flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-600">Body</label>
-              <label className="flex items-center gap-1.5 text-sm text-gray-500">
-                <input
-                  type="checkbox"
-                  checked={useHtml}
-                  onChange={(e) => setUseHtml(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                HTML
-              </label>
-            </div>
+            <label className="md:col-span-1 text-sm font-medium text-gray-600 pt-2">Body</label>
             <div className="md:col-span-2">
-              {useHtml ? (
-                <textarea
-                  value={bodyHtml}
-                  onChange={(e) => setBodyHtml(e.target.value)}
-                  placeholder="HTML content (e.g. <p>Hello</p>)"
-                  rows={10}
-                  className="w-full px-3 py-2 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                />
-              ) : (
-                <textarea
-                  value={bodyText}
-                  onChange={(e) => setBodyText(e.target.value)}
-                  placeholder="Plain text body"
-                  rows={10}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                />
-              )}
+              <RichTextEditor
+                value={bodyHtml}
+                onChange={setBodyHtml}
+                placeholder="Write your message... Use the toolbar for formatting."
+                minHeight="200px"
+              />
             </div>
           </div>
           <div className="flex justify-end pt-2">

@@ -29,6 +29,7 @@ import Analytics from '@/pages/Analytics';
 import BankAccounts from '@/pages/BankAccounts';
 import Merchants from '@/pages/Merchants';
 import Settings from '@/pages/Settings';
+import Security from '@/pages/Security';
 import Mail from '@/pages/Mail';
 
 // =============================================================================
@@ -92,7 +93,7 @@ const ProtectedRoutes = () => (
         </PermissionGuard>
       </Route>
 
-      {/* Partner Accounts */}
+      {/* Partner Accounts - placeholder, coming soon */}
       <Route path="/partners">
         <PermissionGuard permission="VIEW_ANALYTICS">
           <PartnerAccounts />
@@ -163,7 +164,7 @@ const ProtectedRoutes = () => (
       </Route>
 
       {/* Security Settings - accessible to all authenticated users */}
-      {/* <Route path="/security" component={Security} /> */}
+      <Route path="/security" component={Security} />
 
       {/* Fallback to 404 */}
       <Route component={NotFound} />

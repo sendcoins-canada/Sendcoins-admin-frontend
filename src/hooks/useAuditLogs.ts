@@ -4,6 +4,7 @@
  */
 
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { auditLogService } from '../services/auditLogService';
 import { queryKeys } from '../lib/queryClient';
 import type { AuditLogFilters } from '../types/common';
@@ -74,6 +75,9 @@ export const useResourceAuditLogs = (
 export const useExportAuditLogs = () => {
   return useMutation({
     mutationFn: (filters?: AuditLogFilters) => auditLogService.exportLogs(filters),
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Failed to export audit logs');
+    },
     onSuccess: (blob) => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');

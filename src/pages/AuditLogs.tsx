@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuditLogs, useExportAuditLogs } from '@/hooks/useAuditLogs';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -15,6 +15,7 @@ import {
   ArrowSwapHorizontal,
   Timer,
 } from 'iconsax-react';
+import { toast } from 'sonner';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
 
@@ -128,8 +129,16 @@ export default function AuditLogs() {
     data: logsData,
     isLoading,
     isFetching,
+    isError,
+    error,
     refetch,
   } = useAuditLogs({ ...filters, page, limit: 20 });
+
+  useEffect(() => {
+    if (isError && error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load audit logs');
+    }
+  }, [isError, error]);
 
   // Export mutation
   const exportMutation = useExportAuditLogs();

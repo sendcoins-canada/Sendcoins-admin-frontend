@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Eye, EyeSlash, TickCircle } from 'iconsax-react';
 import { Link, useLocation } from 'wouter';
 import { authService } from '@/services/authService';
+import { AppLogo } from '@/components/ui/AppLogo';
 
 export default function SetupPassword() {
   const [showPassword, setShowPassword] = useState(false);
@@ -11,6 +12,7 @@ export default function SetupPassword() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [tokenValidated, setTokenValidated] = useState<boolean | null>(null);
 
   const [pathname] = useLocation();
   const token = useMemo(() => {
@@ -21,6 +23,24 @@ export default function SetupPassword() {
   const isTokenFlow = pathname === '/set-password' || pathname === '/reset-password';
   const isSetPasswordFlow = isTokenFlow || Boolean(token);
   const hasToken = Boolean(token);
+
+  // Validate token on mount when we have one
+  useEffect(() => {
+    if (!hasToken) {
+      setTokenValidated(false);
+      return;
+    }
+    let cancelled = false;
+    authService
+      .validatePasswordToken(token)
+      .then((res) => {
+        if (!cancelled) setTokenValidated(res.valid);
+      })
+      .catch(() => {
+        if (!cancelled) setTokenValidated(false);
+      });
+    return () => { cancelled = true; };
+  }, [hasToken, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,12 +75,7 @@ export default function SetupPassword() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
         <div className="mb-12 flex items-center gap-2">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-black">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span className="text-xl font-bold font-serif">SendCoins</span>
+          <AppLogo height={24} width={140} />
         </div>
         <div className="w-full max-w-md text-center">
           <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl">✓</div>
@@ -80,7 +95,7 @@ export default function SetupPassword() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
         <div className="mb-12 flex items-center gap-2">
-          <span className="text-xl font-bold font-serif">SendCoins</span>
+          <AppLogo height={24} width={140} />
         </div>
         <div className="w-full max-w-md text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid or expired link</h1>
@@ -95,15 +110,42 @@ export default function SetupPassword() {
     );
   }
 
+  if (hasToken && tokenValidated === false) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
+        <div className="mb-12 flex items-center gap-2">
+          <AppLogo height={24} width={140} />
+        </div>
+        <div className="w-full max-w-md text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid or expired link</h1>
+          <p className="text-gray-500 mb-6">This link is invalid or has expired. Please request a new invite or password reset link.</p>
+          <Link href="/login">
+            <button type="button" className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-full">
+              Back to login
+            </button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasToken && tokenValidated === null) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
+        <div className="mb-12 flex items-center gap-2">
+          <AppLogo height={24} width={140} />
+        </div>
+        <div className="w-full max-w-md text-center">
+          <p className="text-gray-500">Validating link...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
       <div className="mb-12 flex items-center gap-2">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-black">
-          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-        <span className="text-xl font-bold font-serif">SendCoins</span>
+        <AppLogo height={24} width={140} />
       </div>
 
       <div className="w-full max-w-md">

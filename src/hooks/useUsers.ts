@@ -4,6 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { userService } from '../services/userService';
 import { walletService } from '../services/walletService';
 import { queryKeys } from '../lib/queryClient';
@@ -275,6 +276,9 @@ export const useAddUserNote = () => {
 export const useExportUsers = () => {
   return useMutation({
     mutationFn: (filters?: UserFilters) => userService.exportUsers(filters),
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Failed to export users');
+    },
     onSuccess: (blob) => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
