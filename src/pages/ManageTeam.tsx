@@ -4,25 +4,26 @@ import {
   useTeamMembers,
   useRoles,
   useDepartments,
-  useSuspendMember,
   useActivateMember,
+  useDeleteMemberPermanently,
 } from '@/hooks/useTeam';
 import { useDebounce } from '@/hooks/useDebounce';
 import { InviteTeamMemberModal } from '@/components/modals/InviteTeamMemberModal';
 import { CreateRoleModal } from '@/components/modals/CreateRoleModal';
 import {
-  Filter,
   Add,
-  RecordCircle,
   Refresh,
   SearchNormal1,
   ShieldTick,
-  UserRemove,
+  Trash,
   UserTick,
   ArrowDown2,
+  RecordCircle,
 } from 'iconsax-react';
 import type { AdminStatus } from '@/types/auth';
 import type { TeamFilters } from '@/types/team';
+import { TableLoader } from '@/components/ui/TableLoader';
+import { TableEmpty } from '@/components/ui/TableEmpty';
 
 // =============================================================================
 // Constants
@@ -33,8 +34,9 @@ const TABS = [
   { key: 'roles', label: 'Roles' },
 ];
 
-const STATUS_COLORS: Record<AdminStatus, { bg: string; text: string }> = {
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   ACTIVE: { bg: 'bg-green-50', text: 'text-green-700' },
+  INACTIVE: { bg: 'bg-gray-100', text: 'text-gray-700' },
   SUSPENDED: { bg: 'bg-yellow-50', text: 'text-yellow-700' },
   LOCKED: { bg: 'bg-orange-50', text: 'text-orange-700' },
   DELETED: { bg: 'bg-red-50', text: 'text-red-700' },
@@ -66,8 +68,8 @@ const getAvatarColor = (name: string) => {
     'bg-indigo-500',
     'bg-teal-500',
   ];
-  const index = name.charCodeAt(0) % colors.length;
-  return colors[index];
+  // const index = name.charCodeAt(0) % colors.length;
+  return colors[2];
 };
 
 // =============================================================================
@@ -82,9 +84,17 @@ export default function ManageTeam() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
 
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+
   // Build filters based on search
   const filters: TeamFilters = {
     ...(debouncedSearch && { search: debouncedSearch }),
+    ...(statusFilter !== 'all' && { status: statusFilter as AdminStatus }),
+    ...(roleFilter !== 'all' && { roleId: roleFilter }),
+    ...(departmentFilter !== 'all' && { departmentId: departmentFilter }),
   };
 
   // Fetch team members with React Query
@@ -107,24 +117,24 @@ export default function ManageTeam() {
   const { data: departmentsData } = useDepartments();
 
   // Mutations
-  const suspendMutation = useSuspendMember();
   const activateMutation = useActivateMember();
+  const deleteMutation = useDeleteMemberPermanently();
 
   const members = membersData?.data ?? [];
   const membersPagination = membersData?.pagination;
-  const roles = rolesData?.data ?? [];
+  const roles = Array.isArray(rolesData) ? rolesData : (rolesData as { data?: unknown[] })?.data ?? [];
 
   const isLoading = activeTab === 'members' ? membersLoading : rolesLoading;
   const isFetching = activeTab === 'members' ? membersFetching : rolesFetching;
 
-  const handleSuspend = (id: string) => {
-    if (confirm('Are you sure you want to suspend this team member?')) {
-      suspendMutation.mutate({ id, reason: 'Suspended by admin' });
-    }
-  };
-
   const handleActivate = (id: string) => {
     activateMutation.mutate(id);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Permanently delete this team member? They will be removed from the system and cannot be restored.')) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const handleRefresh = () => {
@@ -180,10 +190,41 @@ export default function ManageTeam() {
             />
           </div>
 
-          <button className="px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-colors">
-            <Filter size="16" />
-            Filter
-          </button>
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="all">All Statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="LOCKED">Locked</option>
+          </select>
+
+          {/* Role Filter */}
+          <select
+            value={roleFilter}
+            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="all">All Roles</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>{role.name}</option>
+            ))}
+          </select>
+
+          {/* Department Filter */}
+          <select
+            value={departmentFilter}
+            onChange={(e) => { setDepartmentFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="all">All Departments</option>
+            {(departmentsData?.data ?? []).map((dept: { id: string; name: string }) => (
+              <option key={dept.id} value={dept.id}>{dept.name}</option>
+            ))}
+          </select>
 
           {activeTab === 'members' && members.length > 0 && (
             <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
@@ -238,17 +279,12 @@ export default function ManageTeam() {
       </div>
 
       {/* Content */}
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white min-h-[400px]">
+      <div className="rounded-xl border border-gray-100 bg-white min-h-[256px] overflow-x-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Refresh className="w-8 h-8 animate-spin text-blue-600" />
-          </div>
+          <TableLoader />
         ) : activeTab === 'members' ? (
-          /* Team Members Table */
           members.length === 0 ? (
-            <div className="flex items-center justify-center h-64 text-gray-500">
-              No team members found
-            </div>
+            <TableEmpty message="No team members found" />
           ) : (
             <>
               <table className="w-full text-left text-sm">
@@ -266,7 +302,7 @@ export default function ManageTeam() {
                     <th className="px-6 py-4">MFA</th>
                     <th className="px-6 py-4">Last Active</th>
                     <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th className="px-6 py-4 text-right min-w-[140px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -339,29 +375,29 @@ export default function ManageTeam() {
                           <ArrowDown2 size="10" />
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right min-w-[140px] whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          {member.status === 'ACTIVE' ? (
+                          {(String(member.status).toUpperCase() === 'SUSPENDED' || String(member.status).toUpperCase() === 'INACTIVE') && (
                             <button
-                              onClick={() => handleSuspend(member.id)}
-                              disabled={suspendMutation.isPending}
-                              className="p-1.5 hover:bg-yellow-50 rounded-lg text-yellow-600 transition-colors"
-                              title="Suspend member"
-                            >
-                              <UserRemove size="16" />
-                            </button>
-                          ) : member.status === 'SUSPENDED' ? (
-                            <button
-                              onClick={() => handleActivate(member.id)}
+                              onClick={() => handleActivate(String(member.id))}
                               disabled={activateMutation.isPending}
-                              className="p-1.5 hover:bg-green-50 rounded-lg text-green-600 transition-colors"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-green-50 rounded-lg text-green-700 text-xs font-medium transition-colors disabled:opacity-50"
                               title="Activate member"
+                              type="button"
                             >
-                              <UserTick size="16" />
+                              <UserTick size="18" variant="Bold" />
+                              <span>Activate</span>
                             </button>
-                          ) : null}
-                          <button className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400">
-                            <RecordCircle size="16" />
+                          )}
+                          <button
+                            onClick={() => handleDelete(String(member.id))}
+                            disabled={deleteMutation.isPending}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-red-50 rounded-lg text-red-700 text-xs font-medium transition-colors disabled:opacity-50"
+                            title="Delete permanently"
+                            type="button"
+                          >
+                            <Trash size="18" variant="Bold" />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </td>
@@ -401,9 +437,7 @@ export default function ManageTeam() {
         ) : (
           /* Roles Table */
           roles.length === 0 ? (
-            <div className="flex items-center justify-center h-64 text-gray-500">
-              No roles found
-            </div>
+            <TableEmpty message="No roles found" />
           ) : (
             <>
               <table className="w-full text-left text-sm">

@@ -38,6 +38,8 @@ export interface TeamFilters {
   roleId?: number;
   departmentId?: number;
   status?: AdminStatus;
+  page?: number;
+  limit?: number;
 }
 
 // =============================================================================

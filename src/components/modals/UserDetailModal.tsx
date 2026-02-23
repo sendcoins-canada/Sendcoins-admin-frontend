@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useUser, useUserKyc, useUserActivity, useSuspendUser, useUnsuspendUser } from '@/hooks/useUsers';
+import { useUser, useUserKyc, useUserActivity, useUserWallets, useSuspendUser, useUnsuspendUser } from '@/hooks/useUsers';
 import {
   Refresh,
   ShieldTick,
@@ -30,7 +30,7 @@ import {
   Setting2,
   Monitor,
 } from 'iconsax-react';
-import type { UserActivity } from '@/types/user';
+import type { UserActivity, UserWallet } from '@/types/user';
 import type { UserStatus, KycStatus } from '@/types/user';
 
 // =============================================================================
@@ -189,10 +189,28 @@ export function UserDetailModal({ userId, open, onOpenChange }: UserDetailModalP
   // Fetch user data
   const { data: user, isLoading, refetch } = useUser(userId);
   const { data: kycData } = useUserKyc(userId);
+  const { data: userWalletsRaw, isLoading: walletsLoading } = useUserWallets(userId);
   const { data: activityData, isLoading: activityLoading } = useUserActivity(userId, {
     page: activityPage,
     limit: 10,
   });
+
+  // Map backend wallets to UserWallet shape (getWalletsByUser returns array of { crypto, walletId, walletAddress, cryptoBalance, fiatBalance, frozen, network })
+  const walletsList = ((): UserWallet[] => {
+    const raw = userWalletsRaw;
+    if (!raw) return user?.wallets ?? [];
+    const list = Array.isArray(raw) ? raw : (raw as { wallets?: unknown[] })?.wallets;
+    if (!Array.isArray(list)) return user?.wallets ?? [];
+    return list.map((w: Record<string, unknown>) => ({
+      id: String(w.walletId ?? w.walletAddress ?? w.id ?? ''),
+      currency: (w.crypto as string) ?? '—',
+      network: (w.network as string) ?? '—',
+      address: (w.walletAddress as string) ?? (w.address as string) ?? '',
+      balance: parseFloat((w.cryptoBalance as string) ?? '0') || 0,
+      balanceUsd: parseFloat((w.fiatBalance as string) ?? '0') || 0,
+      isFrozen: (w.frozen as boolean) ?? false,
+    }));
+  })();
 
   // Mutations
   const suspendMutation = useSuspendUser();
@@ -354,12 +372,16 @@ export function UserDetailModal({ userId, open, onOpenChange }: UserDetailModalP
                     <InfoRow
                       icon={<Wallet size="16" />}
                       label="Wallets"
-                      value={user.walletCount}
+                      value={walletsList.length > 0 ? walletsList.length : (user.walletCount ?? 'N/A')}
                     />
                     <InfoRow
                       icon={<Card size="16" />}
                       label="Total Balance"
-                      value={formatCurrency(user.totalBalance)}
+                      value={formatCurrency(
+                        walletsList.length > 0
+                          ? walletsList.reduce((sum, w) => sum + (typeof w.balanceUsd === 'number' ? w.balanceUsd : 0), 0)
+                          : (user.totalBalance ?? 0)
+                      )}
                     />
                     <InfoRow
                       icon={<Clock size="16" />}
@@ -497,29 +519,37 @@ export function UserDetailModal({ userId, open, onOpenChange }: UserDetailModalP
 
               {activeTab === 'wallets' && (
                 <div className="space-y-3">
-                  {user.wallets && user.wallets.length > 0 ? (
-                    user.wallets.map((wallet) => (
+                  {walletsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Refresh className="w-6 h-6 animate-spin text-blue-600" />
+                    </div>
+                  ) : walletsList.length > 0 ? (
+                    walletsList.map((wallet) => (
                       <div
                         key={wallet.id}
                         className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
-                            {wallet.currency.slice(0, 2)}
+                            {(wallet.currency || '—').slice(0, 2)}
                           </div>
                           <div>
                             <div className="text-sm font-medium text-gray-900">
                               {wallet.currency} ({wallet.network})
                             </div>
                             <div className="text-xs text-gray-500 font-mono">
-                              {wallet.address.slice(0, 10)}...{wallet.address.slice(-8)}
+                              {wallet.address
+                                ? `${wallet.address.slice(0, 10)}...${wallet.address.slice(-8)}`
+                                : '—'}
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-medium text-gray-900">{wallet.balance}</div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {typeof wallet.balance === 'number' ? wallet.balance.toLocaleString(undefined, { maximumFractionDigits: 8 }) : wallet.balance}
+                          </div>
                           <div className="text-xs text-gray-500">
-                            {formatCurrency(wallet.balanceUsd)}
+                            {formatCurrency(typeof wallet.balanceUsd === 'number' ? wallet.balanceUsd : 0)}
                           </div>
                         </div>
                         {wallet.isFrozen && (

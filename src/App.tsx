@@ -22,6 +22,14 @@ import ManageTeam from '@/pages/ManageTeam';
 import Users from '@/pages/Users';
 import PartnerAccounts from '@/pages/PartnerAccounts';
 import AuditLogs from '@/pages/AuditLogs';
+import Wallets from '@/pages/Wallets';
+import KycQueue from '@/pages/KycQueue';
+import Conversions from '@/pages/Conversions';
+import Analytics from '@/pages/Analytics';
+import BankAccounts from '@/pages/BankAccounts';
+import Merchants from '@/pages/Merchants';
+import Settings from '@/pages/Settings';
+import Mail from '@/pages/Mail';
 
 // =============================================================================
 // Route Components with Guards
@@ -33,10 +41,13 @@ import AuditLogs from '@/pages/AuditLogs';
 const GuestRoutes = () => (
   <GuestGuard>
     <Switch>
-      <Route path="/" component={Login} />
-      <Route path="/login" component={Login} />
+      {/* More specific paths first (wouter uses prefix matching; "/" would match everything) */}
+      <Route path="/set-password" component={SetupPassword} />
+      <Route path="/reset-password" component={SetupPassword} />
       <Route path="/setup-password" component={SetupPassword} />
       <Route path="/confirm-password" component={ConfirmPassword} />
+      <Route path="/login" component={Login} />
+      <Route path="/" component={Login} />
       <Route component={NotFound} />
     </Switch>
   </GuestGuard>
@@ -88,12 +99,71 @@ const ProtectedRoutes = () => (
         </PermissionGuard>
       </Route>
 
+      {/* Wallets */}
+      <Route path="/wallets">
+        <PermissionGuard permission="READ_WALLETS">
+          <Wallets />
+        </PermissionGuard>
+      </Route>
+
+      {/* KYC Queue */}
+      <Route path="/kyc">
+        <PermissionGuard permission="VERIFY_KYC">
+          <KycQueue />
+        </PermissionGuard>
+      </Route>
+
+      {/* Conversions */}
+      <Route path="/conversions">
+        <PermissionGuard anyOf={['READ_TRANSACTIONS', 'VERIFY_TRANSACTIONS']}>
+          <Conversions />
+        </PermissionGuard>
+      </Route>
+
+      {/* Analytics */}
+      <Route path="/analytics">
+        <PermissionGuard permission="VIEW_ANALYTICS">
+          <Analytics />
+        </PermissionGuard>
+      </Route>
+
       {/* Audit Logs */}
       <Route path="/audit-logs">
         <PermissionGuard permission="READ_AUDIT_LOGS">
           <AuditLogs />
         </PermissionGuard>
       </Route>
+
+      {/* Bank Accounts */}
+      <Route path="/bank-accounts">
+        <PermissionGuard permission="READ_USERS">
+          <BankAccounts />
+        </PermissionGuard>
+      </Route>
+
+      {/* Merchants */}
+      <Route path="/merchants">
+        <PermissionGuard anyOf={['READ_USERS', 'VERIFY_KYC']}>
+          <Merchants />
+        </PermissionGuard>
+      </Route>
+
+      {/* Mail */}
+      <Route path="/mail">
+        <PermissionGuard anyOf={['VIEW_ANALYTICS', 'MANAGE_ADMINS']}>
+          <Mail />
+        </PermissionGuard>
+      </Route>
+
+      {/* System Settings */}
+      <Route path="/settings">
+        <PermissionGuard permission="MANAGE_ADMINS">
+          <Settings />
+        </PermissionGuard>
+      </Route>
+
+      {/* Security Settings - accessible to all authenticated users */}
+      {/* <Route path="/security" component={Security} /> */}
 
       {/* Fallback to 404 */}
       <Route component={NotFound} />
@@ -108,11 +178,13 @@ const ProtectedRoutes = () => (
 function Router() {
   return (
     <Switch>
-      {/* Guest routes (login, setup password, etc.) */}
-      <Route path="/" component={GuestRoutes} />
-      <Route path="/login" component={GuestRoutes} />
+      {/* Guest routes: specific paths first (wouter prefix-matches; "/" matches all) */}
+      <Route path="/set-password" component={GuestRoutes} />
+      <Route path="/reset-password" component={GuestRoutes} />
       <Route path="/setup-password" component={GuestRoutes} />
       <Route path="/confirm-password" component={GuestRoutes} />
+      <Route path="/login" component={GuestRoutes} />
+      <Route path="/" component={GuestRoutes} />
 
       {/* All other routes are protected */}
       <Route>

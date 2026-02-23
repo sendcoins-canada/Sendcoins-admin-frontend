@@ -217,33 +217,49 @@ export const platformService = {
   },
 
   /**
-   * Get platform settings
+   * Get platform settings (backend may not implement)
    */
   getSettings: async (): Promise<PlatformSettings> => {
-    const response = await api.get('/platform/settings');
-    return response as unknown as PlatformSettings;
+    try {
+      const response = await api.get('/platform/settings');
+      return response as unknown as PlatformSettings;
+    } catch {
+      return {} as PlatformSettings;
+    }
   },
 
   /**
-   * Update platform settings
+   * Update platform settings (backend may not implement)
    */
   updateSettings: async (settings: Partial<PlatformSettings>): Promise<PlatformSettings> => {
-    const response = await api.patch('/platform/settings', settings);
-    return response as unknown as PlatformSettings;
+    try {
+      const response = await api.patch('/platform/settings', settings);
+      return response as unknown as PlatformSettings;
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Platform settings not available.');
+    }
   },
 
   /**
-   * Enable maintenance mode
+   * Enable maintenance mode (backend may not implement)
    */
   enableMaintenance: async (message: string, allowedIps?: string[]): Promise<void> => {
-    await api.post('/platform/maintenance/enable', { message, allowedIps });
+    try {
+      await api.post('/platform/maintenance/enable', { message, allowedIps });
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Maintenance mode not available.');
+    }
   },
 
   /**
-   * Disable maintenance mode
+   * Disable maintenance mode (backend may not implement)
    */
   disableMaintenance: async (): Promise<void> => {
-    await api.post('/platform/maintenance/disable');
+    try {
+      await api.post('/platform/maintenance/disable');
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Maintenance mode not available.');
+    }
   },
 
   // =========================================================================
@@ -257,11 +273,15 @@ export const platformService = {
     currency: string,
     amount: string
   ): Promise<{ txHash: string }> => {
-    const response = await api.post('/platform/wallets/transfer-to-cold', {
-      currency,
-      amount,
-    });
-    return response as unknown as { txHash: string };
+    try {
+      const response = await api.post('/platform/wallets/transfer-to-cold', {
+        currency,
+        amount,
+      });
+      return response as unknown as { txHash: string };
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Transfer not available.');
+    }
   },
 
   /**
@@ -271,11 +291,15 @@ export const platformService = {
     currency: string,
     amount: string
   ): Promise<{ txHash: string }> => {
-    const response = await api.post('/platform/wallets/transfer-to-hot', {
-      currency,
-      amount,
-    });
-    return response as unknown as { txHash: string };
+    try {
+      const response = await api.post('/platform/wallets/transfer-to-hot', {
+        currency,
+        amount,
+      });
+      return response as unknown as { txHash: string };
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Transfer not available.');
+    }
   },
 
   /**
@@ -286,12 +310,16 @@ export const platformService = {
     amount: string,
     destinationAddress: string
   ): Promise<{ txHash: string }> => {
-    const response = await api.post('/platform/wallets/withdraw-fees', {
-      currency,
-      amount,
-      destinationAddress,
-    });
-    return response as unknown as { txHash: string };
+    try {
+      const response = await api.post('/platform/wallets/withdraw-fees', {
+        currency,
+        amount,
+        destinationAddress,
+      });
+      return response as unknown as { txHash: string };
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Withdraw not available.');
+    }
   },
 
   // =========================================================================
@@ -307,14 +335,18 @@ export const platformService = {
     dateTo: string;
     format: 'csv' | 'pdf';
   }): Promise<Blob> => {
-    const response = await api.post('/platform/reports/generate', params, {
-      responseType: 'blob',
-    });
-    return response as unknown as Blob;
+    try {
+      const response = await api.post<Blob>('/platform/reports/generate', params, {
+        responseType: 'blob',
+      });
+      return response as unknown as Blob;
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Report generation not available.');
+    }
   },
 
   /**
-   * Get scheduled reports
+   * Get scheduled reports (backend may not implement)
    */
   getScheduledReports: async (): Promise<
     Array<{
@@ -326,19 +358,23 @@ export const platformService = {
       nextRun: string;
     }>
   > => {
-    const response = await api.get('/platform/reports/scheduled');
-    return (response as unknown as Array<{
-      id: string;
-      name: string;
-      type: string;
-      frequency: string;
-      recipients: string[];
-      nextRun: string;
-    }>) || [];
+    try {
+      const response = await api.get('/platform/reports/scheduled');
+      return (response as unknown as Array<{
+        id: string;
+        name: string;
+        type: string;
+        frequency: string;
+        recipients: string[];
+        nextRun: string;
+      }>) || [];
+    } catch {
+      return [];
+    }
   },
 
   /**
-   * Create scheduled report
+   * Create scheduled report (backend may not implement)
    */
   createScheduledReport: async (data: {
     name: string;
@@ -346,14 +382,22 @@ export const platformService = {
     frequency: 'daily' | 'weekly' | 'monthly';
     recipients: string[];
   }): Promise<void> => {
-    await api.post('/platform/reports/scheduled', data);
+    try {
+      await api.post('/platform/reports/scheduled', data);
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Scheduled reports not available.');
+    }
   },
 
   /**
-   * Delete scheduled report
+   * Delete scheduled report (backend may not implement)
    */
   deleteScheduledReport: async (id: string): Promise<void> => {
-    await api.delete(`/platform/reports/scheduled/${id}`);
+    try {
+      await api.delete(`/platform/reports/scheduled/${id}`);
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Scheduled reports not available.');
+    }
   },
 };
 

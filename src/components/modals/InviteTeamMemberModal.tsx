@@ -8,6 +8,8 @@ import {
 } from '@/components/ui/dialog';
 import { useInviteAdmin, useRoles, useDepartments } from '@/hooks/useTeam';
 import { Refresh, Sms, User, ShieldTick, Building, Add } from 'iconsax-react';
+import { MfaVerificationModal } from './MfaVerificationModal';
+import { useMfaProtectedAction } from '@/hooks/useMfaProtectedAction';
 
 // =============================================================================
 // Types
@@ -52,8 +54,28 @@ export function InviteTeamMemberModal({
   // Invite mutation
   const inviteMutation = useInviteAdmin();
 
-  const roles = rolesData?.data ?? [];
-  const departments = departmentsData?.data ?? [];
+  // MFA Protection for inviting team members
+  const mfaInvite = useMfaProtectedAction({
+    actionName: 'Invite Team Member',
+    actionDescription: 'You are about to invite a new team member to the admin panel. This action requires MFA verification.',
+    onSuccess: () => {
+      // Reset form after successful invite
+      setFormData({
+        email: '',
+        firstName: '',
+        lastName: '',
+        roleId: '',
+        departmentId: '',
+      });
+      setErrors({});
+      onOpenChange(false);
+      onSuccess?.();
+    },
+  });
+
+  // Backend returns array directly; avoid .data so dropdowns get roles/departments
+  const roles = Array.isArray(rolesData) ? rolesData : (rolesData as { data?: unknown[] })?.data ?? [];
+  const departments = Array.isArray(departmentsData) ? departmentsData : (departmentsData as { data?: unknown[] })?.data ?? [];
 
   const isLoading = rolesLoading || departmentsLoading;
 
@@ -94,35 +116,25 @@ export function InviteTeamMemberModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) return;
 
-    inviteMutation.mutate(
-      {
+    // Execute with MFA protection
+    await mfaInvite.executeWithMfa(async () => {
+      await inviteMutation.mutateAsync({
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
         roleId: formData.roleId as number,
         departmentId: formData.departmentId === '' ? undefined : (formData.departmentId as number),
-      },
-      {
-        onSuccess: () => {
-          // Reset form
-          setFormData({
-            email: '',
-            firstName: '',
-            lastName: '',
-            roleId: '',
-            departmentId: '',
-          });
-          setErrors({});
-          onOpenChange(false);
-          onSuccess?.();
-        },
-      }
-    );
+      });
+    });
+  };
+
+  const handleMfaVerified = (actionToken: string) => {
+    mfaInvite.handleMfaVerified(actionToken);
   };
 
   const handleClose = () => {
@@ -300,6 +312,19 @@ export function InviteTeamMemberModal({
           </form>
         )}
       </DialogContent>
+
+      {/* MFA Verification Modal */}
+      <MfaVerificationModal
+        open={mfaInvite.isMfaModalOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            mfaInvite.closeMfaModal();
+          }
+        }}
+        onVerified={handleMfaVerified}
+        actionName={mfaInvite.modalConfig.actionName}
+        actionDescription={mfaInvite.modalConfig.actionDescription}
+      />
     </Dialog>
   );
 }

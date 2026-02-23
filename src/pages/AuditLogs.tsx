@@ -15,6 +15,8 @@ import {
   ArrowSwapHorizontal,
   Timer,
 } from 'iconsax-react';
+import { TableLoader } from '@/components/ui/TableLoader';
+import { TableEmpty } from '@/components/ui/TableEmpty';
 
 // =============================================================================
 // Types
@@ -111,10 +113,14 @@ export default function AuditLogs() {
   const [page, setPage] = useState(1);
   const [selectedLog, setSelectedLog] = useState<string | null>(null);
 
+  // Filter states
+  const [resourceTypeFilter, setResourceTypeFilter] = useState('all');
+
   // Build filters based on active tab and search
   const filters: AuditLogFilters = {
     ...(activeTab !== 'all' && { action: ACTION_TABS.find((t) => t.key === activeTab)?.action }),
     ...(debouncedSearch && { search: debouncedSearch }),
+    ...(resourceTypeFilter !== 'all' && { resourceType: resourceTypeFilter }),
   };
 
   // Fetch audit logs with React Query
@@ -178,10 +184,22 @@ export default function AuditLogs() {
             />
           </div>
 
-          <button className="px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-colors">
-            <Filter size="16" />
-            Filter
-          </button>
+          {/* Resource Type Filter */}
+          <select
+            value={resourceTypeFilter}
+            onChange={(e) => { setResourceTypeFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="all">All Resources</option>
+            <option value="USER">User</option>
+            <option value="TRANSACTION">Transaction</option>
+            <option value="ADMIN">Admin</option>
+            <option value="WALLET">Wallet</option>
+            <option value="SETTINGS">Settings</option>
+            <option value="ROLE">Role</option>
+            <option value="KYC">KYC</option>
+            <option value="CONVERSION">Conversion</option>
+          </select>
         </div>
 
         <div className="flex items-center gap-2">
@@ -204,15 +222,11 @@ export default function AuditLogs() {
       </div>
 
       {/* Logs List */}
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white min-h-[256px]">
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Refresh className="w-8 h-8 animate-spin text-blue-600" />
-          </div>
+          <TableLoader />
         ) : logs.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            No audit logs found
-          </div>
+          <TableEmpty message="No audit logs found" />
         ) : (
           <div className="divide-y divide-gray-50">
             {logs.map((log) => {

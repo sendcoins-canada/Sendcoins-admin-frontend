@@ -114,12 +114,13 @@ export interface MfaVerifyResponse {
 }
 
 /**
- * MFA setup response
+ * MFA setup response (start-setup returns secret + qrCode; backupCodes come from enable)
  */
 export interface MfaSetupResponse {
-  secret: string;
-  qrCodeUrl: string;
-  backupCodes: string[];
+  secret?: string;
+  qrCodeUrl?: string;
+  qrCode?: string;
+  backupCodes?: string[];
 }
 
 // =============================================================================

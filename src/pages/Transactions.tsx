@@ -3,6 +3,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useTransactions, useTransactionStats, useExportTransactions } from '@/hooks/useTransactions';
 import { useDebounce } from '@/hooks/useDebounce';
 import { TransactionDetailModal } from '@/components/modals/TransactionDetailModal';
+import { TableLoader } from '@/components/ui/TableLoader';
+import { TableEmpty } from '@/components/ui/TableEmpty';
 import {
   Filter,
   ArrowDown2,
@@ -92,10 +94,16 @@ export default function Transactions() {
   const [page, setPage] = useState(1);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currencyFilter, setCurrencyFilter] = useState<string>('all');
+
   // Build filters based on active tab and search
   const filters: TransactionFilters = {
     ...(activeTab !== 'all' && { type: TABS.find(t => t.key === activeTab)?.type }),
     ...(debouncedSearch && { search: debouncedSearch }),
+    ...(statusFilter !== 'all' && { status: statusFilter as TransactionStatus }),
+    ...(currencyFilter !== 'all' && { currency: currencyFilter }),
   };
 
   // Fetch transactions with React Query
@@ -162,10 +170,35 @@ export default function Transactions() {
               />
             </div>
 
-            <button className="px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-colors">
-              <Filter size="16" />
-              Filter
-            </button>
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="all">All Statuses</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="PENDING">Pending</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="FAILED">Failed</option>
+              <option value="CANCELLED">Cancelled</option>
+              <option value="FLAGGED">Flagged</option>
+            </select>
+
+            {/* Currency Filter */}
+            <select
+              value={currencyFilter}
+              onChange={(e) => { setCurrencyFilter(e.target.value); setPage(1); }}
+              className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="all">All Currencies</option>
+              <option value="BTC">Bitcoin (BTC)</option>
+              <option value="ETH">Ethereum (ETH)</option>
+              <option value="USDT">Tether (USDT)</option>
+              <option value="USDC">USD Coin (USDC)</option>
+              <option value="NGN">Naira (NGN)</option>
+              <option value="USD">US Dollar (USD)</option>
+            </select>
           </div>
 
           <div className="flex items-center gap-2">
@@ -197,8 +230,7 @@ export default function Transactions() {
               Total volume
             </div>
             <div className="text-2xl font-bold">
-              {/* {stats?.total?.toLocaleString() ?? '-'} */}
-              $5,249,725
+              {stats != null ? formatUsd(Number(stats.totalVolumeUsd ?? 0)) : '-'}
             </div>
           </div>
 
@@ -208,8 +240,7 @@ export default function Transactions() {
               Completed
             </div>
             <div className="text-2xl font-bold">
-              {/* {stats?.completed?.toLocaleString() ?? '-'} */}
-              128
+              {stats?.completed?.toLocaleString() ?? '-'}
             </div>
           </div>
 
@@ -229,25 +260,20 @@ export default function Transactions() {
               Failed
             </div>
             <div className="text-2xl font-bold">
-              {/* {stats?.failed?.toLocaleString() ?? '-'} */}
-              77
+              {stats?.failed?.toLocaleString() ?? '-'}
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-100 min-h-[400px]">
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white min-h-[256px]">
           {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <Refresh className="w-8 h-8 animate-spin text-blue-600" />
-            </div>
+            <TableLoader />
           ) : transactions.length === 0 ? (
-            <div className="flex items-center justify-center h-64 text-gray-500">
-              No transactions found
-            </div>
+            <TableEmpty message="No transactions found" />
           ) : (
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider">
+              <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider border-b border-gray-100">
                 <tr>
                   <th className="px-6 py-4">TX ID</th>
                   <th className="px-6 py-4">Date</th>

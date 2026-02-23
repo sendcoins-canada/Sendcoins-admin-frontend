@@ -90,11 +90,53 @@ export const queryKeys = {
     list: (filters?: object) => ['audit-logs', 'list', filters] as const,
   },
 
+  // Emails (sent mail)
+  emails: {
+    all: ['emails'] as const,
+    list: (params?: object) => ['emails', 'list', params] as const,
+    detail: (id: number) => ['emails', id] as const,
+  },
+
   // Platform
   platform: {
     balance: () => ['platform', 'balance'] as const,
     revenue: (params?: object) => ['platform', 'revenue', params] as const,
     settings: () => ['platform', 'settings'] as const,
     account: () => ['platform', 'account'] as const,
+  },
+
+  // Dashboard
+  dashboard: {
+    overview: () => ['dashboard', 'overview'] as const,
+    pending: () => ['dashboard', 'pending'] as const,
+  },
+
+  // Wallets
+  wallets: {
+    all: ['wallets'] as const,
+    list: (filters?: object) => ['wallets', 'list', filters] as const,
+    stats: () => ['wallets', 'stats'] as const,
+  },
+
+  // KYC (queue)
+  kyc: {
+    all: ['kyc'] as const,
+    list: (filters?: object) => ['kyc', 'list', filters] as const,
+    stats: () => ['kyc', 'stats'] as const,
+  },
+
+  // Conversions
+  conversions: {
+    all: ['conversions'] as const,
+    list: (filters?: object) => ['conversions', 'list', filters] as const,
+    stats: () => ['conversions', 'stats'] as const,
+  },
+
+  // Analytics
+  analytics: {
+    transactions: (params?: object) => ['analytics', 'transactions', params] as const,
+    users: (params?: object) => ['analytics', 'users', params] as const,
+    revenue: (params?: object) => ['analytics', 'revenue', params] as const,
+    topUsers: (params?: object) => ['analytics', 'top-users', params] as const,
   },
 };

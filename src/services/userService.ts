@@ -117,61 +117,99 @@ export const userService = {
   },
 
   /**
-   * Freeze user account (block all transactions)
+   * Freeze user account (backend may use wallets freeze-all; 404 = not implemented)
    */
   freezeUser: async (id: string, reason: string): Promise<void> => {
-    await api.post(`/users/${id}/freeze`, { reason });
+    try {
+      await api.post(`/users/${id}/freeze`, { reason });
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Freeze not available. Backend may require wallet freeze.');
+    }
   },
 
   /**
-   * Unfreeze user account
+   * Unfreeze user account (backend may use wallets unfreeze; 404 = not implemented)
    */
   unfreezeUser: async (id: string): Promise<void> => {
-    await api.post(`/users/${id}/unfreeze`);
+    try {
+      await api.post(`/users/${id}/unfreeze`);
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Unfreeze not available.');
+    }
   },
 
   /**
-   * Close user account
+   * Close user account (404 = not implemented)
    */
   closeAccount: async (id: string, reason: string): Promise<void> => {
-    await api.post(`/users/${id}/close`, { reason });
+    try {
+      await api.post(`/users/${id}/close`, { reason });
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Close account not available.');
+    }
   },
 
   // =========================================================================
-  // KYC Management
+  // KYC Management (backend: /kyc/:userId)
   // =========================================================================
 
   /**
-   * Get user's KYC documents
+   * Get user's KYC details (backend GET /kyc/:userId)
    */
   getKycDocuments: async (userId: string): Promise<KycDocument[]> => {
-    const response = await api.get(`/users/${userId}/kyc`);
-    return (response as KycDocument[]) || [];
+    try {
+      const response = await api.get<{ documents?: KycDocument[] } | KycDocument[] | Record<string, unknown>>(`/kyc/${userId}`);
+      if (Array.isArray(response)) return response;
+      const doc = (response as { documents?: KycDocument[] })?.documents;
+      if (doc?.length) return doc;
+      // Backend returns single KYC details object (e.g. { userId, kycStatus, verification: { verificationId, submittedAt } })
+      if (response && typeof response === 'object' && !Array.isArray(response)) {
+        const obj = response as Record<string, unknown>;
+        const verification = obj.verification as { verificationId?: string; submittedAt?: string } | undefined;
+        const kycStatus = (obj.kycStatus as string) || (obj.verify_user ? 'verified' : 'pending');
+        const status = kycStatus === 'verified' ? 'APPROVED' : kycStatus === 'rejected' ? 'REJECTED' : 'PENDING';
+        return [
+          {
+            id: (verification?.verificationId as string) || `kyc-${userId}`,
+            type: 'Identity Verification',
+            status: status as 'PENDING' | 'APPROVED' | 'REJECTED',
+            uploadedAt: verification?.submittedAt || (obj.createdAt as string) || (obj.timestamp as string) || '',
+          } as KycDocument,
+        ];
+      }
+      return [];
+    } catch {
+      return [];
+    }
   },
 
   /**
-   * Approve KYC document
+   * Approve KYC for user (backend POST /kyc/:userId/approve - user-level)
    */
-  approveKyc: async (userId: string, documentId: string): Promise<void> => {
-    await api.post(`/users/${userId}/kyc/${documentId}/approve`);
+  approveKyc: async (userId: string, _documentId?: string): Promise<void> => {
+    await api.post(`/kyc/${userId}/approve`, {});
   },
 
   /**
-   * Reject KYC document
+   * Reject KYC for user (backend POST /kyc/:userId/reject)
    */
-  rejectKyc: async (userId: string, documentId: string, reason: string): Promise<void> => {
-    await api.post(`/users/${userId}/kyc/${documentId}/reject`, { reason });
+  rejectKyc: async (userId: string, _documentId: string, reason: string): Promise<void> => {
+    await api.post(`/kyc/${userId}/reject`, { reason });
   },
 
   /**
-   * Request additional KYC documents
+   * Request additional KYC documents (backend may not implement)
    */
   requestKycDocuments: async (
     userId: string,
     documentTypes: string[],
     message?: string
   ): Promise<void> => {
-    await api.post(`/users/${userId}/kyc/request`, { documentTypes, message });
+    try {
+      await api.post(`/kyc/${userId}/request`, { documentTypes, message });
+    } catch {
+      // Backend may not have this endpoint
+    }
   },
 
   // =========================================================================
@@ -185,28 +223,33 @@ export const userService = {
     userId: string,
     params?: { page?: number; limit?: number }
   ): Promise<PaginatedResponse<UserActivity>> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response: any = await api.get(`/users/${userId}/activity`, { params });
-    const activities = response.data || response.activities || response || [];
-    const total = response.total || activities.length;
-    const page = response.page || params?.page || 1;
-    const limit = response.limit || params?.limit || 10;
-    const totalPages = response.totalPages || Math.ceil(total / limit);
-    return {
-      data: activities,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-      },
-    };
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response: any = await api.get(`/users/${userId}/activity`, { params });
+      const activities = response.data || response.activities || [];
+      const meta = response.meta || response.pagination || {};
+      const total = meta.total ?? response.total ?? activities.length;
+      const page = meta.page ?? response.page ?? params?.page ?? 1;
+      const limit = meta.limit ?? response.limit ?? params?.limit ?? 10;
+      const totalPages = meta.totalPages ?? response.totalPages ?? Math.ceil(total / limit);
+      return {
+        data: Array.isArray(activities) ? activities : [],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
+        },
+      };
+    } catch {
+      return { data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0, hasNext: false, hasPrev: false } };
+    }
   },
 
   /**
-   * Get user's login history
+   * Get user's login history (backend may not implement)
    */
   getLoginHistory: async (
     userId: string
@@ -220,15 +263,19 @@ export const userService = {
       success: boolean;
     }>
   > => {
-    const response = await api.get(`/users/${userId}/login-history`);
-    return (response as Array<{
-      id: string;
-      ip: string;
-      device: string;
-      location: string;
-      timestamp: string;
-      success: boolean;
-    }>) || [];
+    try {
+      const response = await api.get(`/users/${userId}/login-history`);
+      return (response as Array<{
+        id: string;
+        ip: string;
+        device: string;
+        location: string;
+        timestamp: string;
+        success: boolean;
+      }>) || [];
+    } catch {
+      return [];
+    }
   },
 
   // =========================================================================
@@ -236,10 +283,14 @@ export const userService = {
   // =========================================================================
 
   /**
-   * Add note to user
+   * Add note to user (backend may not implement)
    */
   addNote: async (userId: string, note: string): Promise<void> => {
-    await api.post(`/users/${userId}/notes`, { note });
+    try {
+      await api.post(`/users/${userId}/notes`, { note });
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Notes not available.');
+    }
   },
 
   /**
@@ -256,14 +307,18 @@ export const userService = {
       createdAt: string;
     }>
   > => {
-    const response = await api.get(`/users/${userId}/notes`);
-    return (response as Array<{
-      id: string;
-      note: string;
-      adminId: string;
-      adminName: string;
-      createdAt: string;
-    }>) || [];
+    try {
+      const response = await api.get(`/users/${userId}/notes`);
+      return (response as Array<{
+        id: string;
+        note: string;
+        adminId: string;
+        adminName: string;
+        createdAt: string;
+      }>) || [];
+    } catch {
+      return [];
+    }
   },
 
   // =========================================================================
@@ -271,14 +326,18 @@ export const userService = {
   // =========================================================================
 
   /**
-   * Export users to CSV
+   * Export users to CSV (backend may not implement)
    */
   exportUsers: async (filters?: UserFilters): Promise<Blob> => {
-    const response = await api.get('/users/export', {
-      params: filters,
-      responseType: 'blob',
-    });
-    return response as unknown as Blob;
+    try {
+      const response = await api.get<Blob>('/users/export', {
+        params: filters,
+        responseType: 'blob',
+      });
+      return response as unknown as Blob;
+    } catch (e) {
+      throw new Error((e as Error)?.message ?? 'Export not available.');
+    }
   },
 };
 

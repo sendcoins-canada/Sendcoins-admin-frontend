@@ -10,8 +10,17 @@ import {
   SearchNormal1,
   ArrowDown2,
   DocumentText,
+  WalletMoney,
+  UserTick,
+  ArrowSwapHorizontal,
+  Chart2,
+  Card,
+  Shop,
+  Setting2,
+  Sms,
 } from 'iconsax-react';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
+import { AppLogo } from '@/components/ui/AppLogo';
 import { useAuth, useAuthState } from '@/hooks/useAuth';
 
 interface DashboardLayoutProps {
@@ -39,32 +48,38 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { icon: People, path: '/users', label: 'Users' },
     { icon: Bank, path: '/partners', label: 'Partner Accounts' },
     { icon: Wallet, path: '/transactions', label: 'Transactions' },
+    { icon: WalletMoney, path: '/wallets', label: 'Wallets' },
+    { icon: Card, path: '/bank-accounts', label: 'Fiat Accounts' },
+    { icon: Shop, path: '/merchants', label: 'Merchants' },
+    { icon: UserTick, path: '/kyc', label: 'KYC Queue' },
+    { icon: ArrowSwapHorizontal, path: '/conversions', label: 'Conversions' },
+    { icon: Sms, path: '/mail', label: 'Mail' },
+    { icon: Chart2, path: '/analytics', label: 'Analytics' },
     { icon: Profile2User, path: '/manage-team', label: 'Manage Team' },
     { icon: DocumentText, path: '/audit-logs', label: 'Audit Logs' },
+    { icon: Setting2, path: '/settings', label: 'Settings' },
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50 text-gray-900 font-sans">
+    <div className="flex h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
       {/* Sidebar */}
       <aside className="w-20 bg-white border-r border-gray-100 flex flex-col items-center py-6 fixed h-full z-10">
-        <div className="mb-12">
-          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-xl">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+        
+        {/* Top Logo - Pinned */}
+        <div className="mb-6 shrink-0 px-2">
+          <AppLogo height={24} width={120} className="h-6 w-auto" />
         </div>
 
-        <nav className="flex-1 flex flex-col gap-8 w-full items-center">
+        {/* Navigation - Scrollable with hidden scrollbars */}
+        <nav className="flex-1 flex flex-col gap-3 w-full items-center overflow-y-auto py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {navItems.map((item) => {
             const isActive = location === item.path;
             return (
-              <Link 
-                key={item.path} 
-                href={item.path} 
-                className={`p-3 rounded-xl transition-all duration-200 group relative block ${isActive ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+              <Link
+                key={item.path}
+                href={item.path}
+                title={item.label} // Added title for native tooltip hover
+                className={`p-3 rounded-xl transition-all duration-200 group relative block flex-shrink-0 ${isActive ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
               >
                 <div className="relative w-6 h-6 flex items-center justify-center">
                   <item.icon size="24" variant={isActive ? "Bold" : "Linear"} color="currentColor" />
@@ -80,7 +95,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           })}
         </nav>
 
-        <div className="mt-auto">
+        {/* Bottom Logout - Pinned */}
+        <div className="mt-auto pt-4 flex-shrink-0 border-t border-gray-50 w-full flex justify-center">
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
@@ -92,19 +108,18 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         </div>
       </aside>
 
-
       {/* Main Content */}
-      <main className="flex-1 ml-20 min-h-screen flex flex-col">
+      <main className="flex-1 ml-20 h-screen overflow-y-auto flex flex-col">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-gray-100 px-8 flex items-center justify-between sticky top-0 z-10">
+        <header className="h-20 bg-white border-b border-gray-100 px-8 flex items-center justify-between sticky top-0 z-10 flex-shrink-0">
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
 
           <div className="flex items-center gap-6 flex-1 justify-end">
             <div className="max-w-md w-full relative hidden md:block">
               <SearchNormal1 size="20" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search across transactions, users, customers" 
+              <input
+                type="text"
+                placeholder="Search across transactions, users, customers"
                 className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border-none rounded-full text-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all"
               />
             </div>
@@ -116,7 +131,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                   {getInitials(user?.firstName, user?.lastName)}
                 </div>
                 <div className="hidden lg:block">
-                  <div className="text-sm font-medium text-gray-900">{user?.fullName || 'Admin'}</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {user ? `${user.firstName} ${user.lastName}`.trim() || 'Admin' : 'Admin'}
+                  </div>
                   <div className="text-xs text-gray-500">{user?.roleName || 'Administrator'}</div>
                 </div>
               </div>

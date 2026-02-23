@@ -28,12 +28,12 @@ export const authService = {
     // Support both direct body and wrapped { data } (e.g. from some proxies)
     const body = response?.data ?? response;
 
-    // Check if MFA is required (backend returns mfaToken without admin data)
-    if (body.requiresMfa && body.mfaToken) {
+    // Check if MFA is required (backend returns tempToken without admin data)
+    if (body.requiresMfa && body.tempToken) {
       return {
         success: true,
         requiresMfa: true,
-        mfaToken: body.mfaToken,
+        mfaToken: body.tempToken, // Map backend's tempToken to frontend's mfaToken
       };
     }
 
@@ -78,10 +78,17 @@ export const authService = {
    * Verify MFA code
    */
   verifyMfa: async (data: MfaVerifyRequest): Promise<LoginResponse> => {
+    // Map frontend's mfaToken to backend's expected tempToken
+    const backendPayload = {
+      tempToken: data.mfaToken,
+      code: data.code,
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response: any = await api.post('/auth/admin/verify-mfa', data);
+    const response: any = await api.post('/auth/admin/verify-mfa', backendPayload);
+    // Support both direct body and wrapped { data } (e.g. from some proxies)
+    const body = response?.data ?? response;
     // Map backend response to frontend expected format
-    const admin = response.admin;
+    const admin = body.admin;
     return {
       success: true,
       user: {
@@ -100,8 +107,8 @@ export const authService = {
         createdAt: admin.createdAt,
         lastLoginAt: admin.lastLoginAt,
       },
-      token: response.accessToken,
-      refreshToken: response.refreshToken,
+      token: body.accessToken,
+      refreshToken: body.refreshToken,
       requiresMfa: false,
     };
   },
@@ -167,10 +174,37 @@ export const authService = {
   },
 
   /**
-   * Reset password with token
+   * Validate password setup/reset token (call before showing password form)
+   */
+  validatePasswordToken: async (token: string): Promise<{ valid: boolean; email?: string }> => {
+    const response = await api.post<{ valid: boolean; email?: string }>('/auth/admin/validate-password-token', { token });
+    return response as { valid: boolean; email?: string };
+  },
+
+  /**
+   * Set or reset password with token (backend expects newPassword + confirmPassword)
+   */
+  setPassword: async (
+    token: string,
+    newPassword: string,
+    confirmPassword: string,
+  ): Promise<void> => {
+    await api.post('/auth/admin/set-password', {
+      token,
+      newPassword,
+      confirmPassword,
+    });
+  },
+
+  /**
+   * @deprecated Use setPassword with confirmPassword. Kept for compatibility.
    */
   resetPassword: async (token: string, newPassword: string): Promise<void> => {
-    await api.post('/auth/admin/set-password', { token, password: newPassword });
+    await api.post('/auth/admin/set-password', {
+      token,
+      newPassword,
+      confirmPassword: newPassword,
+    });
   },
 
   // =========================================================================
@@ -186,10 +220,11 @@ export const authService = {
   },
 
   /**
-   * Enable MFA after setup
+   * Enable MFA after setup. Returns backup codes (show once in modal).
    */
-  enableMfa: async (code: string): Promise<void> => {
-    await api.post('/auth/admin/mfa/enable', { code });
+  enableMfa: async (code: string): Promise<{ backupCodes: string[] }> => {
+    const res = await api.post<{ backupCodes?: string[] }>('/auth/admin/mfa/enable', { code });
+    return { backupCodes: (res as { backupCodes?: string[] })?.backupCodes ?? [] };
   },
 
   /**
@@ -197,6 +232,41 @@ export const authService = {
    */
   disableMfa: async (code: string): Promise<void> => {
     await api.post('/auth/admin/mfa/disable', { code });
+  },
+
+  /**
+   * Generate new MFA backup codes (invalidates old ones)
+   */
+  getBackupCodes: async (): Promise<{ backupCodes: string[] }> => {
+    const response = await api.post<{ backupCodes?: string[] }>('/auth/admin/mfa/backup-codes');
+    return { backupCodes: (response as { backupCodes?: string[] })?.backupCodes ?? [] };
+  },
+
+  // =========================================================================
+  // Action MFA Verification
+  // =========================================================================
+
+  /**
+   * Get MFA status for current user
+   */
+  getMfaStatus: async (): Promise<{ mfaEnabled: boolean; mfaRequired: boolean }> => {
+    const response = await api.get<{ mfaEnabled: boolean; mfaRequired: boolean }>('/auth/admin/mfa/status');
+    return response as unknown as { mfaEnabled: boolean; mfaRequired: boolean };
+  },
+
+  /**
+   * Verify MFA for a sensitive action
+   * Returns an action token that can be used to authorize the action
+   */
+  verifyActionMfa: async (
+    code: string,
+    action?: string
+  ): Promise<{ success: boolean; actionToken: string; expiresIn: number }> => {
+    const response = await api.post<{ success: boolean; actionToken: string; expiresIn: number }>(
+      '/auth/admin/verify-action-mfa',
+      { code, action }
+    );
+    return response as unknown as { success: boolean; actionToken: string; expiresIn: number };
   },
 
   // =========================================================================

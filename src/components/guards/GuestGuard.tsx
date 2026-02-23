@@ -7,22 +7,13 @@
 import { ReactNode } from 'react';
 import { Redirect } from 'wouter';
 import { useAuthState, useAuthInit } from '../../hooks/useAuth';
+import { PageLoader } from '@/components/ui/PageLoader';
 
 interface GuestGuardProps {
   children: ReactNode;
 }
 
-/**
- * Loading spinner component
- */
-const LoadingSpinner = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="flex flex-col items-center gap-4">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      <p className="text-muted-foreground">Loading...</p>
-    </div>
-  </div>
-);
+const LoadingSpinner = () => <PageLoader />;
 
 /**
  * GuestGuard component

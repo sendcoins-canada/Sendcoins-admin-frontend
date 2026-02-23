@@ -3,6 +3,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useUsers, useUserStats, useExportUsers } from '@/hooks/useUsers';
 import { useDebounce } from '@/hooks/useDebounce';
 import { UserDetailModal } from '@/components/modals/UserDetailModal';
+import { TableLoader } from '@/components/ui/TableLoader';
+import { TableEmpty } from '@/components/ui/TableEmpty';
 import {
   Filter,
   Add,
@@ -92,10 +94,18 @@ export default function Users() {
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
+  // Filter states
+  const [kycFilter, setKycFilter] = useState<string>('all');
+  const [accountTypeFilter, setAccountTypeFilter] = useState<string>('all');
+  const [countryFilter, setCountryFilter] = useState<string>('all');
+
   // Build filters based on active tab and search
   const filters: UserFilters = {
     ...(activeTab !== 'all' && { status: STATUS_TABS.find(t => t.key === activeTab)?.status }),
     ...(debouncedSearch && { search: debouncedSearch }),
+    ...(kycFilter !== 'all' && { kycStatus: kycFilter as KycStatus }),
+    ...(accountTypeFilter !== 'all' && { accountType: accountTypeFilter }),
+    ...(countryFilter !== 'all' && { country: countryFilter }),
   };
 
   // Fetch users with React Query
@@ -161,10 +171,44 @@ export default function Users() {
             />
           </div>
 
-          <button className="px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-colors">
-            <Filter size="16" />
-            Filter
-          </button>
+          {/* KYC Status Filter */}
+          <select
+            value={kycFilter}
+            onChange={(e) => { setKycFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="all">All KYC</option>
+            <option value="VERIFIED">Verified</option>
+            <option value="PENDING">Pending</option>
+            <option value="NOT_STARTED">Not Started</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+
+          {/* Account Type Filter */}
+          <select
+            value={accountTypeFilter}
+            onChange={(e) => { setAccountTypeFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="all">All Types</option>
+            <option value="PERSONAL">Personal</option>
+            <option value="BUSINESS">Business</option>
+          </select>
+
+          {/* Country Filter */}
+          <select
+            value={countryFilter}
+            onChange={(e) => { setCountryFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="all">All Countries</option>
+            <option value="NG">Nigeria</option>
+            <option value="GH">Ghana</option>
+            <option value="KE">Kenya</option>
+            <option value="ZA">South Africa</option>
+            <option value="US">United States</option>
+            <option value="GB">United Kingdom</option>
+          </select>
         </div>
 
         <div className="flex items-center gap-2">
@@ -246,18 +290,14 @@ export default function Users() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white min-h-[256px]">
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Refresh className="w-8 h-8 animate-spin text-blue-600" />
-          </div>
+          <TableLoader />
         ) : users.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            No users found
-          </div>
+          <TableEmpty message="No users found" />
         ) : (
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider">
+            <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider border-b border-gray-100">
               <tr>
                 <th className="px-6 py-4">User ID</th>
                 <th className="px-6 py-4">Name</th>

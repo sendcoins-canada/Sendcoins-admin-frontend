@@ -116,6 +116,21 @@ export const useDeactivateMember = () => {
 };
 
 /**
+ * Hook to permanently delete a team member (remove from database)
+ */
+export const useDeleteMemberPermanently = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => teamService.deleteMemberPermanently(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.team.member(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.team.all });
+    },
+  });
+};
+
+/**
  * Hook to resend invitation
  */
 export const useResendInvitation = () => {

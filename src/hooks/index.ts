@@ -65,6 +65,7 @@ export {
   useSuspendMember,
   useActivateMember,
   useDeactivateMember,
+  useDeleteMemberPermanently,
   useResendInvitation,
   useResetMemberMfa,
   useRoles,

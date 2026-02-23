@@ -26,12 +26,13 @@ import {
   CloseSquare,
   Export,
   Clock,
-  Calendar,
   User,
   Wallet,
   Bank,
 } from 'iconsax-react';
 import type { TransactionType, TransactionStatus } from '@/types/transaction';
+import { MfaVerificationModal } from './MfaVerificationModal';
+import { useMfaProtectedAction } from '@/hooks/useMfaProtectedAction';
 
 // =============================================================================
 // Types
@@ -197,6 +198,10 @@ export function TransactionDetailModal({
   onOpenChange,
 }: TransactionDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
+  const [pendingAction, setPendingAction] = useState<{
+    type: 'approve' | 'reject';
+    data: { note?: string; reason?: string };
+  } | null>(null);
 
   // Fetch transaction data
   const { data: transaction, isLoading, refetch } = useTransaction(transactionId);
@@ -206,6 +211,19 @@ export function TransactionDetailModal({
   const unflagMutation = useUnflagTransaction();
   const approveMutation = useApproveTransaction();
   const rejectMutation = useRejectTransaction();
+
+  // MFA Protection for sensitive actions
+  const mfaApprove = useMfaProtectedAction({
+    actionName: 'Approve Transaction',
+    actionDescription: 'You are about to approve this transaction. This action requires MFA verification.',
+    onSuccess: () => refetch(),
+  });
+
+  const mfaReject = useMfaProtectedAction({
+    actionName: 'Reject Transaction',
+    actionDescription: 'You are about to reject this transaction. This action requires MFA verification.',
+    onSuccess: () => refetch(),
+  });
 
   const handleFlag = () => {
     const reason = prompt('Enter reason for flagging:');
@@ -218,16 +236,35 @@ export function TransactionDetailModal({
     unflagMutation.mutate(transactionId);
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     const note = prompt('Enter approval note (optional):');
-    approveMutation.mutate({ id: transactionId, note: note || undefined });
+    setPendingAction({ type: 'approve', data: { note: note || undefined } });
+
+    await mfaApprove.executeWithMfa(async () => {
+      await approveMutation.mutateAsync({ id: transactionId, note: note || undefined });
+    });
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     const reason = prompt('Enter rejection reason:');
-    if (reason) {
-      rejectMutation.mutate({ id: transactionId, reason });
+    if (!reason) return;
+
+    setPendingAction({ type: 'reject', data: { reason } });
+
+    await mfaReject.executeWithMfa(async () => {
+      await rejectMutation.mutateAsync({ id: transactionId, reason });
+    });
+  };
+
+  const handleMfaVerified = async (actionToken: string) => {
+    if (!pendingAction) return;
+
+    if (pendingAction.type === 'approve') {
+      mfaApprove.handleMfaVerified(actionToken);
+    } else {
+      mfaReject.handleMfaVerified(actionToken);
     }
+    setPendingAction(null);
   };
 
   const tabs = [
@@ -533,6 +570,33 @@ export function TransactionDetailModal({
           </div>
         )}
       </DialogContent>
+
+      {/* MFA Verification Modals */}
+      <MfaVerificationModal
+        open={mfaApprove.isMfaModalOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            mfaApprove.closeMfaModal();
+            setPendingAction(null);
+          }
+        }}
+        onVerified={handleMfaVerified}
+        actionName={mfaApprove.modalConfig.actionName}
+        actionDescription={mfaApprove.modalConfig.actionDescription}
+      />
+
+      <MfaVerificationModal
+        open={mfaReject.isMfaModalOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            mfaReject.closeMfaModal();
+            setPendingAction(null);
+          }
+        }}
+        onVerified={handleMfaVerified}
+        actionName={mfaReject.modalConfig.actionName}
+        actionDescription={mfaReject.modalConfig.actionDescription}
+      />
     </Dialog>
   );
 }

@@ -5,6 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../services/userService';
+import { walletService } from '../services/walletService';
 import { queryKeys } from '../lib/queryClient';
 import type { UserFilters } from '../types/user';
 
@@ -61,6 +62,17 @@ export const useUserActivity = (userId: string, params?: { page?: number; limit?
   return useQuery({
     queryKey: [...queryKeys.users.detail(userId), 'activity', params],
     queryFn: () => userService.getUserActivity(userId, params),
+    enabled: !!userId,
+  });
+};
+
+/**
+ * Hook to get user's wallets (crypto + fiat from backend)
+ */
+export const useUserWallets = (userId: string) => {
+  return useQuery({
+    queryKey: [...queryKeys.users.detail(userId), 'wallets'],
+    queryFn: () => walletService.getWalletsByUser(userId),
     enabled: !!userId,
   });
 };

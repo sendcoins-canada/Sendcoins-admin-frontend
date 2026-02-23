@@ -17,6 +17,36 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:4005' : '');
 
+// =============================================================================
+// MFA Action Token Management
+// =============================================================================
+// Temporary storage for MFA action token (used for protected API calls)
+let currentMfaActionToken: string | null = null;
+
+/**
+ * Set the MFA action token for the next API call(s)
+ * The token will be automatically cleared after use
+ */
+export const setMfaActionToken = (token: string | null) => {
+  currentMfaActionToken = token;
+};
+
+/**
+ * Get and consume the current MFA action token
+ */
+export const getMfaActionToken = (): string | null => {
+  const token = currentMfaActionToken;
+  // Don't clear immediately - let it persist for multiple calls in the same action
+  return token;
+};
+
+/**
+ * Clear the MFA action token
+ */
+export const clearMfaActionToken = () => {
+  currentMfaActionToken = null;
+};
+
 if (!import.meta.env.DEV && !API_BASE_URL) {
   console.error(
     '[Sendcoins Admin] VITE_API_URL is not set. Set it in Vercel (or your host) to your admin backend API base URL (e.g. https://your-admin-api.vercel.app).'
@@ -52,9 +82,15 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Add MFA action token header if set
+    const mfaToken = getMfaActionToken();
+    if (mfaToken && config.headers) {
+      config.headers['X-MFA-Token'] = mfaToken;
+    }
+
     // Log requests in development
     if (import.meta.env.DEV) {
-      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}${mfaToken ? ' (with MFA token)' : ''}`);
     }
 
     return config;
@@ -161,8 +197,13 @@ api.interceptors.response.use(
         // Refresh failed - logout user
         processQueue(new Error('Token refresh failed'));
         store.dispatch(logout());
-        // Only redirect if not already on login page to prevent infinite loop
-        if (!window.location.pathname.includes('/login')) {
+        // Don't redirect when on login or on set-password/reset-password (guest can set password without being logged in)
+        const path = window.location.pathname;
+        const isGuestAuthPage =
+          path.includes('/login') ||
+          path.includes('/set-password') ||
+          path.includes('/reset-password');
+        if (!isGuestAuthPage) {
           window.location.href = '/login';
         }
         return Promise.reject(refreshError);

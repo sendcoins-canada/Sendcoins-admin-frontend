@@ -17,7 +17,7 @@ import type { PaginatedResponse } from '../types/common';
 
 export const notificationService = {
   /**
-   * Get paginated list of notifications
+   * Get paginated list of notifications (backend returns { data, pagination })
    */
   getNotifications: async (
     filters?: NotificationFilters & { page?: number; limit?: number }
@@ -25,15 +25,15 @@ export const notificationService = {
     const response = await api.get<PaginatedResponse<Notification>>('/notifications', {
       params: filters,
     });
-    return response.data;
+    return (response as PaginatedResponse<Notification>) ?? { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } };
   },
 
   /**
-   * Get notification counts
+   * Get notification counts (backend returns { total, unread, byCategory })
    */
   getCounts: async (): Promise<NotificationCounts> => {
     const response = await api.get<NotificationCounts>('/notifications/count');
-    return response.data;
+    return (response as NotificationCounts) ?? { total: 0, unread: 0, byCategory: {} };
   },
 
   /**
@@ -66,15 +66,19 @@ export const notificationService = {
   },
 
   /**
-   * Get notification preferences
+   * Get notification preferences (backend returns object directly)
    */
   getPreferences: async (): Promise<{
     email: boolean;
     push: boolean;
     categories: Record<string, boolean>;
   }> => {
-    const response = await api.get('/notifications/preferences');
-    return response.data;
+    try {
+      const response = await api.get<{ email: boolean; push: boolean; categories: Record<string, boolean> }>('/notifications/preferences');
+      return (response as { email: boolean; push: boolean; categories: Record<string, boolean> }) ?? { email: true, push: true, categories: {} };
+    } catch {
+      return { email: true, push: true, categories: {} };
+    }
   },
 
   /**

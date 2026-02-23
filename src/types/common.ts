@@ -127,6 +127,9 @@ export interface AuditFilters {
   dateTo?: string;
 }
 
+/** Filters for audit log list (action + search) */
+export type AuditLogFilters = Pick<AuditFilters, 'action'> & { search?: string };
+
 // =============================================================================
 // Export
 // =============================================================================
