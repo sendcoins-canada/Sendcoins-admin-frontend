@@ -35,14 +35,14 @@ export default function Conversions() {
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: queryKeys.conversions.list({
-      page: 1,
-      limit: 100,
+      page,
+      limit,
       status: statusFilter === 'all' ? undefined : statusFilter,
       search: debouncedSearch || undefined,
     }),
     queryFn: () => conversionService.getList({
-      page: 1,
-      limit: 100,
+      page,
+      limit,
       status: statusFilter === 'all' ? undefined : statusFilter,
       search: debouncedSearch || undefined,
     }),

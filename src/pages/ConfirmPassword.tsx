@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Eye, EyeSlash } from 'iconsax-react';
 import { Link, useLocation } from 'wouter';
 import { authService } from '@/services/authService';
@@ -12,6 +12,7 @@ export default function ConfirmPassword() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [tokenValidated, setTokenValidated] = useState<boolean | null>(null);
 
   const [pathname] = useLocation();
   const token = useMemo(() => {
@@ -20,6 +21,23 @@ export default function ConfirmPassword() {
   }, [pathname]);
 
   const hasToken = Boolean(token);
+
+  useEffect(() => {
+    if (!hasToken) {
+      setTokenValidated(false);
+      return;
+    }
+    let cancelled = false;
+    authService
+      .validatePasswordToken(token)
+      .then((res) => {
+        if (!cancelled) setTokenValidated(res.valid);
+      })
+      .catch(() => {
+        if (!cancelled) setTokenValidated(false);
+      });
+    return () => { cancelled = true; };
+  }, [hasToken, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +88,20 @@ export default function ConfirmPassword() {
     );
   }
 
-  if (!hasToken) {
+  if (hasToken && tokenValidated === null) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
+        <div className="mb-12 flex items-center gap-2">
+          <AppLogo height={24} width={140} />
+        </div>
+        <div className="w-full max-w-md text-center">
+          <p className="text-gray-500">Validating link...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasToken || tokenValidated === false) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
         <div className="mb-12 flex items-center gap-2">

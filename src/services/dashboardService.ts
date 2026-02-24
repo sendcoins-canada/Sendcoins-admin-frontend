@@ -6,11 +6,37 @@
 import { api } from '../lib/api';
 
 export interface DashboardOverview {
-  users?: { total: number; active: number; suspended: number; newThisMonth?: number; newThisWeek?: number };
-  transactions?: { total: number; completed: number; pending: number; failed: number; flagged: number };
-  platform?: unknown;
-  kyc?: unknown;
-  recentActivity?: unknown[];
+  users?: {
+    total: number;
+    active: number;
+    suspended: number;
+    newThisMonth?: number;
+    newThisWeek?: number;
+  };
+  transactions?: {
+    total: number;
+    completed: number;
+    pending: number;
+    failed: number;
+    flagged: number;
+    totalCryptoVolume?: string;
+    totalFiatVolume?: string;
+    thisMonth?: number;
+    thisWeek?: number;
+    today?: number;
+  };
+  platform?: {
+    feeWalletBalance?: string;
+    hotWalletBalance?: string;
+    monthlyRevenue?: string;
+  };
+  kyc?: {
+    total: number;
+    verified: number;
+    pending: number;
+    verificationRate?: string;
+  };
+  recentActivity?: Array<{ id: number; action: string; adminName: string; timestamp: string; details?: unknown }>;
 }
 
 export interface DashboardPending {

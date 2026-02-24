@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { walletService } from '@/services/walletService';
-import { Refresh, Wallet, SearchNormal1, DocumentDownload } from 'iconsax-react';
+import { Refresh, Wallet, SearchNormal1, DocumentDownload, Sun1 } from 'iconsax-react';
+import { toast } from 'sonner';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
 
 export default function Wallets() {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cryptoFilter, setCryptoFilter] = useState('all');
@@ -43,6 +45,26 @@ export default function Wallets() {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         network: networkFilter !== 'all' ? networkFilter : undefined,
       }),
+  });
+
+  const freezeMutation = useMutation({
+    mutationFn: ({ crypto, walletId, reason }: { crypto: string; walletId: number; reason?: string }) =>
+      walletService.freezeWallet(crypto, walletId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallets.all });
+      toast.success('Wallet frozen');
+    },
+    onError: (e: Error) => toast.error(e?.message ?? 'Failed to freeze wallet'),
+  });
+
+  const unfreezeMutation = useMutation({
+    mutationFn: ({ crypto, walletId }: { crypto: string; walletId: number }) =>
+      walletService.unfreezeWallet(crypto, walletId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallets.all });
+      toast.success('Wallet unfrozen');
+    },
+    onError: (e: Error) => toast.error(e?.message ?? 'Failed to unfreeze wallet'),
   });
 
   const list = data?.data ?? [];
@@ -208,10 +230,15 @@ export default function Wallets() {
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Balance</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Network</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredList.map((row: Record<string, unknown>, i: number) => (
+                {filteredList.map((row: Record<string, unknown>, i: number) => {
+                  const walletId = Number(row.walletId ?? row.wallet_id ?? row.id ?? 0);
+                  const crypto = String(row.crypto ?? row.asset ?? row.currency ?? '').toLowerCase();
+                  const isFrozen = Boolean(row.frozen || row.freeze === 'yes');
+                  return (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/30">
                     <td className="py-3 px-4">
                       <div className="font-mono text-xs">
@@ -262,16 +289,45 @@ export default function Wallets() {
                     <td className="py-3 px-4">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          row.frozen || row.freeze === 'yes'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-green-100 text-green-700'
+                          isFrozen ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
                         }`}
                       >
-                        {row.frozen || row.freeze === 'yes' ? 'Frozen' : 'Active'}
+                        {isFrozen ? 'Frozen' : 'Active'}
                       </span>
                     </td>
+                    <td className="py-3 px-4 text-right">
+                      {walletId && crypto ? (
+                        isFrozen ? (
+                          <button
+                            type="button"
+                            onClick={() => unfreezeMutation.mutate({ crypto, walletId })}
+                            disabled={unfreezeMutation.isPending}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
+                          >
+                            <Sun1 size={14} />
+                            Unfreeze
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reason = window.prompt('Reason for freeze (optional):');
+                              freezeMutation.mutate({ crypto, walletId, reason: reason ?? undefined });
+                            }}
+                            disabled={freezeMutation.isPending}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50"
+                          >
+                            <Sun1 size={14} />
+                            Freeze
+                          </button>
+                        )
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

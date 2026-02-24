@@ -15,17 +15,17 @@ export default function Analytics() {
 
   const { data: txAnalytics, isLoading: txLoading, refetch: refetchTx, isFetching: fetchingTx } = useQuery({
     queryKey: queryKeys.analytics.transactions({ groupBy, dateRange }),
-    queryFn: () => analyticsService.getTransactionAnalytics({ groupBy }),
+    queryFn: () => analyticsService.getTransactionAnalytics({ groupBy, dateRange }),
   });
 
   const { data: userAnalytics, isLoading: userLoading, refetch: refetchUser, isFetching: fetchingUser } = useQuery({
     queryKey: queryKeys.analytics.users({ groupBy, dateRange }),
-    queryFn: () => analyticsService.getUserAnalytics({ groupBy }),
+    queryFn: () => analyticsService.getUserAnalytics({ groupBy, dateRange }),
   });
 
   const { data: revenueAnalytics, isLoading: revenueLoading, refetch: refetchRevenue, isFetching: fetchingRevenue } = useQuery({
     queryKey: queryKeys.analytics.revenue({ groupBy, dateRange }),
-    queryFn: () => analyticsService.getRevenueAnalytics({ groupBy }),
+    queryFn: () => analyticsService.getRevenueAnalytics({ groupBy, dateRange }),
   });
 
   const { data: topUsers, isLoading: topLoading } = useQuery({

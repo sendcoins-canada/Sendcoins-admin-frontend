@@ -5,6 +5,7 @@ import {
   useRoles,
   useDepartments,
   useActivateMember,
+  useDeactivateMember,
   useDeleteMemberPermanently,
 } from '@/hooks/useTeam';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -17,6 +18,7 @@ import {
   ShieldTick,
   Trash,
   UserTick,
+  UserRemove,
   ArrowDown2,
   RecordCircle,
 } from 'iconsax-react';
@@ -118,6 +120,7 @@ export default function ManageTeam() {
 
   // Mutations
   const activateMutation = useActivateMember();
+  const deactivateMutation = useDeactivateMember();
   const deleteMutation = useDeleteMemberPermanently();
 
   const members = membersData?.data ?? [];
@@ -129,6 +132,12 @@ export default function ManageTeam() {
 
   const handleActivate = (id: string) => {
     activateMutation.mutate(id);
+  };
+
+  const handleDeactivate = (id: string) => {
+    if (confirm('Deactivate this team member? They will not be able to sign in until reactivated.')) {
+      deactivateMutation.mutate(id);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -387,6 +396,18 @@ export default function ManageTeam() {
                             >
                               <UserTick size="18" variant="Bold" />
                               <span>Activate</span>
+                            </button>
+                          )}
+                          {String(member.status).toUpperCase() === 'ACTIVE' && (
+                            <button
+                              onClick={() => handleDeactivate(String(member.id))}
+                              disabled={deactivateMutation.isPending}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-amber-50 rounded-lg text-amber-700 text-xs font-medium transition-colors disabled:opacity-50"
+                              title="Deactivate member"
+                              type="button"
+                            >
+                              <UserRemove size="18" variant="Bold" />
+                              <span>Deactivate</span>
                             </button>
                           )}
                           <button

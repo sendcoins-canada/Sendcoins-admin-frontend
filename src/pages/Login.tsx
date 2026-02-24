@@ -260,43 +260,48 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
-      {/* Logo */}
-      <div className="mb-12">
-        <AppLogo height={32} width={140} className="h-8 w-auto" />
-      </div>
-
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">
-            {requiresMfa ? '🔐' : '👋'}
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {requiresMfa ? 'Two-Factor Authentication' : 'Welcome back'}
-          </h1>
-          <p className="text-gray-500">
-            {requiresMfa
-              ? 'Verify your identity to continue'
-              : 'Please enter your details to sign in.'}
-          </p>
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <AppLogo height={32} width={160} className="h-8 w-auto" />
         </div>
 
-        {/* Form */}
-        {requiresMfa ? (
-          <MfaForm
-            onSubmit={handleMfaVerify}
-            onCancel={handleMfaCancel}
-            isLoading={isVerifyingMfa}
-            error={error}
-          />
-        ) : (
-          <LoginForm
-            onSubmit={handleLogin}
-            isLoading={isLoggingIn}
-            error={error}
-          />
-        )}
+        {/* Card */}
+        <div className="rounded-3xl border border-gray-100 bg-white shadow-sm px-6 py-7 sm:px-8 sm:py-8">
+          {/* Header */}
+          <div className="flex flex-col items-center text-center mb-7">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 text-2xl bg-gray-50 text-gray-900">
+              {requiresMfa ? '🔐' : '👋'}
+            </div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+              {requiresMfa ? 'Two-Factor Authentication' : 'Welcome back'}
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 max-w-xs">
+              {requiresMfa
+                ? 'Enter the 6-digit code from your authenticator app to continue.'
+                : 'Sign in to access your Sendcoins admin dashboard.'}
+            </p>
+          </div>
+
+          {/* Form */}
+          <div className="bg-gray-50 rounded-2xl p-5 sm:p-6 border border-gray-100">
+            {requiresMfa ? (
+              <MfaForm
+                onSubmit={handleMfaVerify}
+                onCancel={handleMfaCancel}
+                isLoading={isVerifyingMfa}
+                error={error}
+              />
+            ) : (
+              <LoginForm
+                onSubmit={handleLogin}
+                isLoading={isLoggingIn}
+                error={error}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

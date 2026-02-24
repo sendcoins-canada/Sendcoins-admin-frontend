@@ -1,8 +1,7 @@
 import React from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useDashboardOverview, useDashboardPending } from '@/hooks/useDashboard';
 import { usePlatformStats, usePlatformBalance, usePlatformRevenue } from '@/hooks/usePlatform';
-import { useTransactionStats } from '@/hooks/useTransactions';
-import { useUserStats } from '@/hooks/useUsers';
 import {
   Refresh,
   People,
@@ -217,14 +216,33 @@ const QuickAction = ({ title, description, icon, href, count, countColor = 'bg-b
 // =============================================================================
 
 export default function Dashboard() {
-  // Fetch all dashboard data
-  const { data: platformStats, isLoading: statsLoading, refetch: refetchStats } = usePlatformStats();
+  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useDashboardOverview();
+  const { data: pending } = useDashboardPending();
+  const { data: platformStats, refetch: refetchPlatformStats } = usePlatformStats();
   const { data: platformBalance, isLoading: balanceLoading } = usePlatformBalance();
   const { data: platformRevenue, isLoading: revenueLoading } = usePlatformRevenue({ period: 'month' });
-  const { data: userStats } = useUserStats();
-  const { data: txStats } = useTransactionStats();
 
-  const isLoading = statsLoading || balanceLoading || revenueLoading;
+  const statsFromOverview = overview?.users && overview?.transactions && overview?.kyc
+    ? {
+        totalUsers: overview.users.total,
+        activeUsers: overview.users.active,
+        totalTransactions: overview.transactions.total,
+        transactionVolumeUsd: overview.transactions.totalFiatVolume ?? '0',
+        pendingKyc: overview.kyc.pending,
+        flaggedTransactions: overview.transactions.flagged,
+      }
+    : null;
+  const stats = statsFromOverview ?? platformStats ?? {};
+  const pendingKyc = pending?.pendingKyc ?? stats.pendingKyc ?? 0;
+  const flaggedTx = pending?.flaggedTransactions ?? stats.flaggedTransactions ?? 0;
+  const pendingTx = pending?.pendingTransactions ?? 0;
+
+  const isLoading = overviewLoading || balanceLoading || revenueLoading;
+
+  const refetchAll = () => {
+    refetchOverview();
+    refetchPlatformStats();
+  };
 
   return (
     <DashboardLayout title="Dashboard">
@@ -236,7 +254,7 @@ export default function Dashboard() {
             <p className="text-sm text-gray-500">Welcome back! Here's what's happening.</p>
           </div>
           <button
-            onClick={() => refetchStats()}
+            onClick={() => refetchAll()}
             disabled={isLoading}
             className="p-2 bg-gray-50 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
           >
@@ -248,30 +266,30 @@ export default function Dashboard() {
         <div className="grid grid-cols-4 gap-6">
           <StatCard
             title="Total Users"
-            value={formatNumber(platformStats?.totalUsers ?? 0)}
+            value={formatNumber(stats.totalUsers ?? 0)}
             icon={<People size="20" className="text-blue-600" />}
             iconBg="bg-blue-100"
             trend={platformStats?.trends?.users}
-            subtitle={`${formatNumber(platformStats?.activeUsers ?? 0)} active`}
+            subtitle={`${formatNumber(stats.activeUsers ?? 0)} active`}
           />
           <StatCard
             title="Transactions"
-            value={formatNumber(platformStats?.totalTransactions ?? 0)}
+            value={formatNumber(stats.totalTransactions ?? 0)}
             icon={<ArrowSwapHorizontal size="20" className="text-green-600" />}
             iconBg="bg-green-100"
             trend={platformStats?.trends?.transactions}
-            subtitle={formatCurrency(platformStats?.transactionVolumeUsd ?? '0')}
+            subtitle={formatCurrency(stats.transactionVolumeUsd ?? '0')}
           />
           <StatCard
             title="Pending KYC"
-            value={formatNumber(platformStats?.pendingKyc ?? 0)}
+            value={formatNumber(pendingKyc)}
             icon={<ShieldTick size="20" className="text-yellow-600" />}
             iconBg="bg-yellow-100"
             subtitle="Requires verification"
           />
           <StatCard
             title="Flagged Transactions"
-            value={formatNumber(platformStats?.flaggedTransactions ?? 0)}
+            value={formatNumber(flaggedTx)}
             icon={<Warning2 size="20" className="text-red-600" />}
             iconBg="bg-red-100"
             subtitle="Needs review"
@@ -334,8 +352,8 @@ export default function Dashboard() {
               title="Review KYC Applications"
               description="Verify pending user identities"
               icon={<ShieldTick size="18" />}
-              href="/users?tab=kyc"
-              count={userStats?.pendingKyc}
+              href="/kyc"
+              count={pendingKyc}
               countColor="bg-yellow-100 text-yellow-600"
             />
             <QuickAction
@@ -343,7 +361,7 @@ export default function Dashboard() {
               description="Review suspicious activities"
               icon={<Warning2 size="18" />}
               href="/transactions?status=flagged"
-              count={txStats?.flagged}
+              count={flaggedTx}
               countColor="bg-red-100 text-red-600"
             />
             <QuickAction
@@ -351,7 +369,7 @@ export default function Dashboard() {
               description="Approve or reject pending transactions"
               icon={<ArrowSwapHorizontal size="18" />}
               href="/transactions?status=pending"
-              count={txStats?.pending}
+              count={pendingTx}
               countColor="bg-blue-100 text-blue-600"
             />
             <QuickAction
@@ -371,7 +389,7 @@ export default function Dashboard() {
               Active Users
             </div>
             <div className="text-xl font-bold text-gray-900">
-              {formatCompact(userStats?.active ?? 0)}
+              {formatCompact(stats.activeUsers ?? 0)}
             </div>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -380,7 +398,7 @@ export default function Dashboard() {
               Verified KYC
             </div>
             <div className="text-xl font-bold text-gray-900">
-              {formatCompact(userStats?.verifiedKyc ?? 0)}
+              {formatCompact(overview?.kyc?.verified ?? 0)}
             </div>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -389,7 +407,7 @@ export default function Dashboard() {
               Completed TX
             </div>
             <div className="text-xl font-bold text-gray-900">
-              {formatCompact(txStats?.completed ?? 0)}
+              {formatCompact(overview?.transactions?.completed ?? 0)}
             </div>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -398,16 +416,16 @@ export default function Dashboard() {
               Suspended Users
             </div>
             <div className="text-xl font-bold text-gray-900">
-              {formatCompact(userStats?.suspended ?? 0)}
+              {formatCompact(overview?.users?.suspended ?? 0)}
             </div>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
               <div className="w-2 h-2 rounded-full bg-red-500" />
-              Banned Users
+              Pending TX
             </div>
             <div className="text-xl font-bold text-gray-900">
-              {formatCompact(userStats?.banned ?? 0)}
+              {formatCompact(pendingTx)}
             </div>
           </div>
         </div>

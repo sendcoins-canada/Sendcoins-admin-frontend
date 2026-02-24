@@ -43,21 +43,41 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || 'AD';
   };
 
-  const navItems = [
-    { icon: Ghost, path: '/dashboard', label: 'Home', hasNotification: true },
-    { icon: People, path: '/users', label: 'Users' },
-    { icon: Bank, path: '/partners', label: 'Partner Accounts' },
-    { icon: Wallet, path: '/transactions', label: 'Transactions' },
-    { icon: WalletMoney, path: '/wallets', label: 'Wallets' },
-    { icon: Card, path: '/bank-accounts', label: 'Fiat Accounts' },
-    { icon: Shop, path: '/merchants', label: 'Merchants' },
-    { icon: UserTick, path: '/kyc', label: 'KYC Queue' },
-    { icon: ArrowSwapHorizontal, path: '/conversions', label: 'Conversions' },
-    { icon: Sms, path: '/mail', label: 'Mail' },
-    { icon: Chart2, path: '/analytics', label: 'Analytics' },
-    { icon: Profile2User, path: '/manage-team', label: 'Manage Team' },
-    { icon: DocumentText, path: '/audit-logs', label: 'Audit Logs' },
-    { icon: Setting2, path: '/settings', label: 'Settings' },
+  const navGroups: { groupLabel?: string; items: Array<{ icon: typeof Ghost; path: string; label: string; hasNotification?: boolean }> }[] = [
+    { groupLabel: 'Home', items: [{ icon: Ghost, path: '/dashboard', label: 'Home', hasNotification: true }] },
+    {
+      groupLabel: 'Operations',
+      items: [
+        { icon: Wallet, path: '/transactions', label: 'Transactions' },
+        { icon: ArrowSwapHorizontal, path: '/conversions', label: 'Conversions' },
+        { icon: WalletMoney, path: '/wallets', label: 'Wallets' },
+        { icon: Card, path: '/bank-accounts', label: 'Fiat Accounts' },
+        { icon: Shop, path: '/merchants', label: 'Merchants' },
+      ],
+    },
+    {
+      groupLabel: 'Customers',
+      items: [
+        { icon: People, path: '/users', label: 'Users' },
+        { icon: UserTick, path: '/kyc', label: 'KYC Queue' },
+      ],
+    },
+    { groupLabel: 'Comms', items: [{ icon: Sms, path: '/mail', label: 'Mail' }] },
+    {
+      groupLabel: 'Risk & Compliance',
+      items: [
+        { icon: Chart2, path: '/analytics', label: 'Analytics' },
+        { icon: DocumentText, path: '/audit-logs', label: 'Audit Logs' },
+      ],
+    },
+    {
+      groupLabel: 'System',
+      items: [
+        { icon: Profile2User, path: '/manage-team', label: 'Manage Team' },
+        { icon: Setting2, path: '/settings', label: 'Settings' },
+      ],
+    },
+    { groupLabel: 'Partners', items: [{ icon: Bank, path: '/partners', label: 'Partner Accounts' }] },
   ];
 
   return (
@@ -70,29 +90,34 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           <AppLogo height={24} width={120} className="h-6 w-auto" />
         </div>
 
-        {/* Navigation - Scrollable with hidden scrollbars */}
-        <nav className="flex-1 flex flex-col gap-3 w-full items-center overflow-y-auto py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {navItems.map((item) => {
-            const isActive = location === item.path;
-            return (
-              <Link
-                key={item.path}
-                href={item.path}
-                title={item.label} // Added title for native tooltip hover
-                className={`p-3 rounded-xl transition-all duration-200 group relative block flex-shrink-0 ${isActive ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-              >
-                <div className="relative w-6 h-6 flex items-center justify-center">
-                  <item.icon size="24" variant={isActive ? "Bold" : "Linear"} color="currentColor" />
-                  {item.hasNotification && (
-                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
-                  )}
-                </div>
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r-full -ml-3" />
-                )}
-              </Link>
-            );
-          })}
+        {/* Navigation - Grouped, scrollable */}
+        <nav className="flex-1 flex flex-col gap-1 w-full items-center overflow-y-auto py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {navGroups.map(({ groupLabel, items }, gIdx) => (
+            <div key={groupLabel ?? gIdx} className="flex flex-col gap-1 w-full items-center">
+              {gIdx > 0 && <div className="w-8 border-t border-gray-100 my-1" aria-hidden />}
+              {items.map((item) => {
+                const isActive = location === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    title={item.label}
+                    className={`p-3 rounded-xl transition-all duration-200 relative block flex-shrink-0 ${isActive ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    <div className="relative w-6 h-6 flex items-center justify-center">
+                      <item.icon size="24" variant={isActive ? 'Bold' : 'Linear'} color="currentColor" />
+                      {item.hasNotification && (
+                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                      )}
+                    </div>
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r-full -ml-3" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Bottom Logout - Pinned */}

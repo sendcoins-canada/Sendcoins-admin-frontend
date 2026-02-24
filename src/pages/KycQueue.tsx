@@ -68,16 +68,18 @@ export default function KycQueue() {
 
   const { data: listData, isLoading, refetch, isFetching } = useQuery({
     queryKey: queryKeys.kyc.list({
-      page: 1,
-      limit: 100,
+      page,
+      limit,
       status: statusFilter,
-      search: debouncedSearch
+      search: debouncedSearch,
+      country: countryFilter !== 'all' ? countryFilter : undefined,
     }),
     queryFn: () => kycQueueService.getList({
-      page: 1,
-      limit: 100,
-      status: statusFilter,
-      search: debouncedSearch
+      page,
+      limit,
+      status: statusFilter === 'all' ? 'all' : statusFilter,
+      search: debouncedSearch || undefined,
+      country: countryFilter !== 'all' ? countryFilter : undefined,
     }),
   });
 

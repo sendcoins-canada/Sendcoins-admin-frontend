@@ -102,6 +102,9 @@ export {
   useExportAuditLogs,
 } from './useAuditLogs';
 
+// Dashboard hooks
+export { useDashboardOverview, useDashboardPending } from './useDashboard';
+
 // Platform hooks
 export {
   usePlatformBalance,

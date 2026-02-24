@@ -235,7 +235,20 @@ export default function AuditLogs() {
         {isLoading ? (
           <TableLoader />
         ) : logs.length === 0 ? (
-          <TableEmpty message="No audit logs found" />
+          <TableEmpty
+            message={filters.action || filters.search || filters.resourceType ? 'No audit logs match your filters.' : 'No audit logs found.'}
+            action={
+              filters.action || filters.search || filters.resourceType ? (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('all'); setSearchQuery(''); setResourceTypeFilter('all'); setPage(1); }}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Clear filters
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
           <div className="divide-y divide-gray-50">
             {logs.map((log) => {
