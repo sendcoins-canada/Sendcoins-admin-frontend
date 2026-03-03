@@ -29,7 +29,8 @@ export type Permission =
   | 'VIEW_ANALYTICS'
   | 'EXPORT_DATA'
   | 'READ_NOTIFICATIONS'
-  | 'MANAGE_NOTIFICATION_SETTINGS';
+  | 'MANAGE_NOTIFICATION_SETTINGS'
+  | 'SEND_EMAILS';
 
 /**
  * Admin roles

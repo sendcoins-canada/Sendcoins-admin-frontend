@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useUser, useUserKyc, useUserActivity, useUserWallets, useSuspendUser, useUnsuspendUser } from '@/hooks/useUsers';
+import { useHasPermission } from '@/hooks/useAuth';
 import {
   Refresh,
   ShieldTick,
@@ -215,6 +216,7 @@ export function UserDetailModal({ userId, open, onOpenChange }: UserDetailModalP
   // Mutations
   const suspendMutation = useSuspendUser();
   const unsuspendMutation = useUnsuspendUser();
+  const canSuspendUser = useHasPermission('SUSPEND_USERS');
 
   const handleSuspend = () => {
     const reason = prompt('Enter reason for suspension:');
@@ -284,8 +286,9 @@ export function UserDetailModal({ userId, open, onOpenChange }: UserDetailModalP
                   {user.status === 'ACTIVE' ? (
                     <button
                       onClick={handleSuspend}
-                      disabled={suspendMutation.isPending}
-                      className="px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-yellow-100"
+                      disabled={suspendMutation.isPending || !canSuspendUser}
+                      title={!canSuspendUser ? 'You need SUSPEND_USERS permission.' : undefined}
+                      className="px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-yellow-100 disabled:opacity-50"
                     >
                       <UserRemove size="16" />
                       Suspend
@@ -293,8 +296,9 @@ export function UserDetailModal({ userId, open, onOpenChange }: UserDetailModalP
                   ) : user.status === 'SUSPENDED' ? (
                     <button
                       onClick={handleUnsuspend}
-                      disabled={unsuspendMutation.isPending}
-                      className="px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-green-100"
+                      disabled={unsuspendMutation.isPending || !canSuspendUser}
+                      title={!canSuspendUser ? 'You need SUSPEND_USERS permission.' : undefined}
+                      className="px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-green-100 disabled:opacity-50"
                     >
                       <UserTick size="16" />
                       Activate

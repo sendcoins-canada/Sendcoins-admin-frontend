@@ -9,6 +9,7 @@ import { KycDetailModal } from '@/components/modals/KycDetailModal';
 import { toast } from 'sonner';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
+import { useHasPermission } from '@/hooks/useAuth';
 
 // Type for KYC user from API
 interface KycUser {
@@ -47,6 +48,7 @@ function formatDate(dateString?: string | null): string {
 }
 
 export default function KycQueue() {
+  const canVerifyKyc = useHasPermission('VERIFY_KYC');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
@@ -302,22 +304,19 @@ export default function KycQueue() {
 
                           {isPending && (
                             <>
-                              {/* Quick Approve */}
                               <button
                                 onClick={(e) => handleQuickApprove(e, id)}
-                                disabled={approveMutation.isPending}
+                                disabled={approveMutation.isPending || !canVerifyKyc}
+                                title={!canVerifyKyc ? 'You need VERIFY_KYC permission.' : 'Approve KYC'}
                                 className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
-                                title="Approve KYC"
                               >
                                 <TickCircle size={16} />
                               </button>
-
-                              {/* Quick Reject */}
                               <button
                                 onClick={(e) => handleQuickReject(e, id)}
-                                disabled={rejectMutation.isPending}
+                                disabled={rejectMutation.isPending || !canVerifyKyc}
+                                title={!canVerifyKyc ? 'You need VERIFY_KYC permission.' : 'Reject KYC'}
                                 className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                title="Reject KYC"
                               >
                                 <CloseCircle size={16} />
                               </button>

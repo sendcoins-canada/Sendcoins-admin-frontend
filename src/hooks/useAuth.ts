@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { authService } from '../services/authService';
 import { queryKeys } from '../lib/queryClient';
+import { canAccessRoute } from '@/constants/routePermissions';
 import {
   useAppDispatch,
   useAppSelector,
@@ -29,6 +30,37 @@ import {
   selectHasAllPermissions,
 } from '../store';
 import type { LoginCredentials, MfaVerifyRequest, Permission } from '../types/auth';
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+const DEFAULT_ROUTE_PRIORITY: string[] = [
+  '/dashboard',
+  '/transactions',
+  '/users',
+  '/wallets',
+  '/kyc',
+  '/conversions',
+  '/analytics',
+  '/audit-logs',
+  '/bank-accounts',
+  '/merchants',
+  '/mail',
+  '/manage-team',
+  '/settings',
+  '/security',
+];
+
+const getDefaultRouteForPermissions = (permissions: Permission[]): string => {
+  for (const path of DEFAULT_ROUTE_PRIORITY) {
+    if (canAccessRoute(path, permissions)) {
+      return path;
+    }
+  }
+  // Fallback: if nothing matches, send to security (no special permission) or root
+  return '/security';
+};
 
 // =============================================================================
 // Auth State Hooks
@@ -103,8 +135,15 @@ export const useAuth = () => {
         dispatch(setMfaRequired({ mfaToken: data.mfaToken }));
       } else if (data.user && data.token) {
         // Login complete
-        dispatch(setCredentials({ user: data.user, token: data.token, refreshToken: data.refreshToken }));
-        setLocation('/dashboard');
+        dispatch(
+          setCredentials({
+            user: data.user,
+            token: data.token,
+            refreshToken: data.refreshToken,
+          }),
+        );
+        const defaultRoute = getDefaultRouteForPermissions(data.user.permissions ?? []);
+        setLocation(defaultRoute);
       } else {
         // Unexpected response - clear loading and set error
         dispatch(setAuthLoading(false));
@@ -125,8 +164,15 @@ export const useAuth = () => {
     },
     onSuccess: (data) => {
       if (data.user && data.token) {
-        dispatch(setCredentials({ user: data.user, token: data.token, refreshToken: data.refreshToken }));
-        setLocation('/dashboard');
+        dispatch(
+          setCredentials({
+            user: data.user,
+            token: data.token,
+            refreshToken: data.refreshToken,
+          }),
+        );
+        const defaultRoute = getDefaultRouteForPermissions(data.user.permissions ?? []);
+        setLocation(defaultRoute);
       }
     },
     onError: (error: Error) => {

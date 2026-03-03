@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useTransactions, useTransactionStats, useExportTransactions } from '@/hooks/useTransactions';
+import { useHasPermission } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
 import { TransactionDetailModal } from '@/components/modals/TransactionDetailModal';
 import { TableLoader } from '@/components/ui/TableLoader';
@@ -126,7 +127,7 @@ export default function Transactions() {
   // Fetch stats
   const { data: stats } = useTransactionStats();
 
-  // Export mutation
+  const canExportTx = useHasPermission('EXPORT_TRANSACTIONS');
   const exportMutation = useExportTransactions();
 
   const transactions = transactionsData?.data ?? [];
@@ -220,8 +221,9 @@ export default function Transactions() {
             </button>
             <button
               onClick={handleExport}
-              disabled={exportMutation.isPending}
-              className="px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-colors"
+              disabled={exportMutation.isPending || !canExportTx}
+              title={!canExportTx ? 'You need EXPORT_TRANSACTIONS permission.' : undefined}
+              className="px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-colors disabled:opacity-50"
             >
               <DocumentDownload size="16" />
               Export

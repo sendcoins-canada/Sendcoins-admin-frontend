@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useLocation, Link } from 'wouter';
 import {
   Ghost,
@@ -22,6 +22,9 @@ import {
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { AppLogo } from '@/components/ui/AppLogo';
 import { useAuth, useAuthState } from '@/hooks/useAuth';
+import { useAppSelector } from '@/store';
+import { selectPermissions } from '@/store/slices/authSlice';
+import { canAccessRoute } from '@/constants/routePermissions';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -43,7 +46,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || 'AD';
   };
 
-  const navGroups: { groupLabel?: string; items: Array<{ icon: typeof Ghost; path: string; label: string; hasNotification?: boolean }> }[] = [
+  const userPermissions = useAppSelector(selectPermissions);
+
+  const allNavGroups: { groupLabel?: string; items: Array<{ icon: typeof Ghost; path: string; label: string; hasNotification?: boolean }> }[] = [
     { groupLabel: 'Home', items: [{ icon: Ghost, path: '/dashboard', label: 'Home', hasNotification: true }] },
     {
       groupLabel: 'Operations',
@@ -79,6 +84,15 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     },
     { groupLabel: 'Partners', items: [{ icon: Bank, path: '/partners', label: 'Partner Accounts' }] },
   ];
+
+  const navGroups = useMemo(() => {
+    return allNavGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => canAccessRoute(item.path, userPermissions)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [userPermissions]);
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">

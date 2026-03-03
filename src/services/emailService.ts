@@ -4,6 +4,12 @@
 
 import { api } from '../lib/api';
 
+export interface EmailAttachmentPayload {
+  filename: string;
+  contentBase64: string;
+  contentType?: string;
+}
+
 export interface SendEmailPayload {
   to: string[];
   cc?: string[];
@@ -12,6 +18,7 @@ export interface SendEmailPayload {
   bodyText?: string;
   bodyHtml?: string;
   fromName?: string;
+  attachments?: EmailAttachmentPayload[];
 }
 
 export interface SentEmailRecord {

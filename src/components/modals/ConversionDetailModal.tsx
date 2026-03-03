@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { MfaVerificationModal } from './MfaVerificationModal';
 import { useMfaProtectedAction } from '@/hooks/useMfaProtectedAction';
+import { useHasPermission } from '@/hooks/useAuth';
 
 // =============================================================================
 // Types
@@ -96,7 +97,7 @@ export function ConversionDetailModal({ conversionId, open, onOpenChange }: Conv
     enabled: !!conversionId && open,
   });
 
-  // Approve mutation
+  const canVerifyConversion = useHasPermission('VERIFY_TRANSACTIONS');
   const approveMutation = useMutation({
     mutationFn: () => conversionService.approve(conversionId),
     onSuccess: () => {
@@ -367,14 +368,17 @@ export function ConversionDetailModal({ conversionId, open, onOpenChange }: Conv
               <div className="flex gap-3 pt-4 border-t border-gray-100">
                 <button
                   onClick={() => setShowRejectForm(true)}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 flex items-center justify-center gap-2"
+                  disabled={!canVerifyConversion}
+                  title={!canVerifyConversion ? 'You need VERIFY_TRANSACTIONS permission.' : undefined}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <CloseCircle size="18" />
                   Reject
                 </button>
                 <button
                   onClick={handleApprove}
-                  disabled={approveMutation.isPending}
+                  disabled={approveMutation.isPending || !canVerifyConversion}
+                  title={!canVerifyConversion ? 'You need VERIFY_TRANSACTIONS permission.' : undefined}
                   className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {approveMutation.isPending ? (

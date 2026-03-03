@@ -3,7 +3,33 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { analyticsService } from '@/services/analyticsService';
-import { Refresh, Chart2, DocumentDownload, TrendUp, TrendDown, People, ArrowSwapHorizontal, DollarCircle } from 'iconsax-react';
+import {
+  Refresh,
+  Chart2,
+  DocumentDownload,
+  TrendUp,
+  TrendDown,
+  People,
+  ArrowSwapHorizontal,
+  DollarCircle,
+} from 'iconsax-react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
 
@@ -43,7 +69,21 @@ export default function Analytics() {
   };
 
   // Parse analytics data safely
-  const txData = txAnalytics as Record<string, unknown> | undefined;
+  const txData = txAnalytics as
+    | {
+        timeSeries?: Array<{
+          period: string;
+          transactionCount: number;
+          completedCount: number;
+          totalVolume: string;
+          completedVolume: string;
+        }>;
+        total?: number;
+        totalTransactions?: number;
+        volume?: number;
+        totalVolume?: number;
+      }
+    | undefined;
   const userData = userAnalytics as Record<string, unknown> | undefined;
   const revData = revenueAnalytics as Record<string, unknown> | undefined;
   const topList = Array.isArray(topUsers) ? topUsers : [];
@@ -68,6 +108,78 @@ export default function Analytics() {
     ? registrations[registrations.length - 1]?.count || 0
     : Number(userData?.new ?? userData?.newUsers ?? 0);
   const totalRevenue = Number(revData?.total ?? revData?.totalRevenue ?? 0);
+
+  const txTimeSeries =
+    Array.isArray(txData?.timeSeries) && txData.timeSeries.length > 0
+      ? txData.timeSeries.map((d) => ({
+          period: d.period,
+          transactions: d.transactionCount,
+          completed: d.completedCount,
+          volume: Number(d.totalVolume ?? 0),
+        }))
+      : [];
+
+  const registrationSeries =
+    registrations.length > 0
+      ? registrations.map((r) => ({ period: r.period, users: r.count }))
+      : [];
+
+  const revenueSeries =
+    Array.isArray(revData?.timeSeries) && revData.timeSeries.length > 0
+      ? (revData.timeSeries as Array<{ period: string; revenue: string; expenses: string }>).map(
+          (r) => ({
+            period: r.period,
+            revenue: Number(r.revenue ?? 0),
+            expenses: Number(r.expenses ?? 0),
+          }),
+        )
+      : [];
+
+  const topUsersSeries = Array.isArray(topUsers)
+    ? (topUsers as Array<{ email?: string | null; totalVolume?: string; transactionCount?: number }>).map(
+        (u) => ({
+          label: (u.email ?? '').split('@')[0] || 'User',
+          volume: Number(u.totalVolume ?? 0),
+          count: Number(u.transactionCount ?? 0),
+        }),
+      )
+    : [];
+
+  const txChartConfig: ChartConfig = {
+    transactions: {
+      label: 'Transactions',
+      color: 'hsl(var(--chart-1))',
+    },
+    completed: {
+      label: 'Completed',
+      color: 'hsl(var(--chart-2))',
+    },
+  };
+
+  const registrationsChartConfig: ChartConfig = {
+    users: {
+      label: 'New users',
+      color: 'hsl(var(--chart-3))',
+    },
+  };
+
+  const revenueChartConfig: ChartConfig = {
+    revenue: {
+      label: 'Revenue',
+      color: 'hsl(var(--chart-4))',
+    },
+    expenses: {
+      label: 'Expenses',
+      color: 'hsl(var(--chart-5))',
+    },
+  };
+
+  const topUsersChartConfig: ChartConfig = {
+    volume: {
+      label: 'Volume',
+      color: 'hsl(var(--chart-1))',
+    },
+  };
 
   return (
     <DashboardLayout title="Analytics">
@@ -186,202 +298,176 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Detailed Analytics */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Transaction Analytics */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+          {/* Detailed Analytics with charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Transaction Analytics chart */}
+            <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+              <h3 className="font-medium text-gray-900 flex items-center gap-2">
                 <ArrowSwapHorizontal size={18} className="text-blue-600" />
                 Transaction Analytics
               </h3>
-              <div className="space-y-3">
-                {txData && typeof txData === 'object' && Object.entries(txData).slice(0, 6).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    <span className="font-medium text-gray-900">
-                      {typeof value === 'number' ? value.toLocaleString() : String(value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {txTimeSeries.length === 0 ? (
+                <TableEmpty message="No transaction data for this period." />
+              ) : (
+                <ChartContainer config={txChartConfig} className="h-64">
+                  <LineChart data={txTimeSeries}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="period"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      allowDecimals={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Line
+                      type="monotone"
+                      dataKey="transactions"
+                      stroke="var(--color-transactions)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="completed"
+                      stroke="var(--color-completed)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              )}
             </div>
 
-            {/* User Analytics */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+            {/* User registrations chart */}
+            <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+              <h3 className="font-medium text-gray-900 flex items-center gap-2">
                 <People size={18} className="text-purple-600" />
                 User Analytics
               </h3>
-              <div className="space-y-4">
-                {/* Registrations */}
-                {registrations.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Registrations</h4>
-                    <div className="space-y-2">
-                      {registrations.slice(0, 5).map((reg, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">{reg.period}</span>
-                          <span className="font-medium text-gray-900">{reg.count.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* By Country */}
-                {byCountry.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">By Country</h4>
-                    <div className="space-y-2">
-                      {byCountry.slice(0, 5).map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">{item.country}</span>
-                          <span className="font-medium text-gray-900">{item.count.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* By Verification */}
-                {byVerification.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">By Verification</h4>
-                    <div className="space-y-2">
-                      {byVerification.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 capitalize">{item.status}</span>
-                          <span className="font-medium text-gray-900">{item.count.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {registrations.length === 0 && byCountry.length === 0 && byVerification.length === 0 && (
-                  <div className="text-sm text-gray-500 text-center py-4">No data available</div>
-                )}
-              </div>
+              {registrationSeries.length === 0 ? (
+                <TableEmpty message="No registration data for this period." />
+              ) : (
+                <ChartContainer config={registrationsChartConfig} className="h-64">
+                  <LineChart data={registrationSeries}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="period"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      allowDecimals={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Line
+                      type="monotone"
+                      dataKey="users"
+                      stroke="var(--color-users)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              )}
             </div>
 
-            {/* Revenue Analytics */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
-              <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+            {/* Revenue Analytics chart */}
+            <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4 lg:col-span-2">
+              <h3 className="font-medium text-gray-900 flex items-center gap-2">
                 <DollarCircle size={18} className="text-green-600" />
                 Revenue Analytics
               </h3>
-              <div className="space-y-4">
-                {revData?.message ? (
-                  <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
-                    {String(revData.message)}
-                  </div>
-                ) : (
-                  <>
-                    {/* Time Series */}
-                    {Array.isArray(revData?.timeSeries) && revData.timeSeries.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Time Series</h4>
-                        <div className="space-y-2">
-                          {(revData.timeSeries as Array<{ period: string; revenue: string | number; expenses?: string | number }>)
-                            .slice(0, 5)
-                            .map((item, idx) => (
-                              <div key={idx} className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600">{item.period}</span>
-                                <div className="flex items-center gap-3">
-                                  <span className="font-medium text-green-600">
-                                    ${Number(item.revenue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                  </span>
-                                  {item.expenses !== undefined && (
-                                    <span className="text-xs text-gray-500">
-                                      (Exp: ${Number(item.expenses).toLocaleString(undefined, { minimumFractionDigits: 2 })})
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* By Category */}
-                    {Array.isArray(revData?.byCategory) && revData.byCategory.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">By Category</h4>
-                        <div className="space-y-2">
-                          {(revData.byCategory as Array<{ category: string; amount: string | number }>)
-                            .slice(0, 5)
-                            .map((item, idx) => (
-                              <div key={idx} className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600 capitalize">{item.category}</span>
-                                <span className="font-medium text-gray-900">
-                                  ${Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {(!Array.isArray(revData?.timeSeries) || revData.timeSeries.length === 0) &&
-                     (!Array.isArray(revData?.byCategory) || revData.byCategory.length === 0) && (
-                      <div className="text-sm text-gray-500 text-center py-4">No data available</div>
-                    )}
-                  </>
-                )}
-              </div>
+              {revData?.message ? (
+                <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+                  {String(revData.message)}
+                </div>
+              ) : revenueSeries.length === 0 ? (
+                <TableEmpty message="No revenue data for this period." />
+              ) : (
+                <ChartContainer config={revenueChartConfig} className="h-64">
+                  <LineChart data={revenueSeries}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="period"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="var(--color-revenue)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="expenses"
+                      stroke="var(--color-expenses)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              )}
             </div>
           </div>
 
           {/* Top Users */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-medium text-gray-900">Top Users by Volume</h3>
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                <People size={18} className="text-blue-600" />
+                Top Users by Volume
+              </h3>
               <span className="text-xs text-gray-500">Last {dateRange} days</span>
             </div>
             {topLoading ? (
               <TableLoader />
-            ) : topList.length === 0 ? (
+            ) : topUsersSeries.length === 0 ? (
               <TableEmpty message="No data available" />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50/50 text-gray-500 uppercase text-[10px] font-medium tracking-wider border-b border-gray-100">
-                    <tr>
-                      <th className="text-left py-3 px-4">#</th>
-                      <th className="text-left py-3 px-4">User</th>
-                      <th className="text-left py-3 px-4">Transactions</th>
-                      <th className="text-left py-3 px-4">Volume</th>
-                      <th className="text-left py-3 px-4">Country</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {topList.map((u: Record<string, unknown>, i: number) => (
-                      <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-3 px-4 text-gray-500">{i + 1}</td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {String(u.name ?? u.fullName ?? 'Unknown')}
-                            </div>
-                            <div className="text-xs text-gray-500">{String(u.email ?? '-')}</div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                            {Number(u.transactionCount ?? 0).toLocaleString()}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-medium text-gray-900">
-                          ${Number(u.totalVolume ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4 text-gray-500">
-                          {String(u.country ?? '-')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ChartContainer config={topUsersChartConfig} className="h-64">
+                <BarChart data={topUsersSeries}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar
+                    dataKey="volume"
+                    fill="var(--color-volume)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
             )}
           </div>
         </div>

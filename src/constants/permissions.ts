@@ -102,6 +102,11 @@ export const PERMISSION_METADATA: Record<
     description: 'Configure notification preferences',
     category: 'Notifications',
   },
+  SEND_EMAILS: {
+    label: 'Send Emails',
+    description: 'Compose and send broadcast emails to users/admins',
+    category: 'Communications',
+  },
 };
 
 /**

@@ -11,8 +11,10 @@ import { useMfaProtectedAction } from '@/hooks/useMfaProtectedAction';
 import { toast } from 'sonner';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
+import { useHasPermission } from '@/hooks/useAuth';
 
 export default function Conversions() {
+  const canVerifyConversion = useHasPermission('VERIFY_TRANSACTIONS');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
@@ -359,22 +361,19 @@ export default function Conversions() {
 
                           {isPending && (
                             <>
-                              {/* Quick Approve */}
                               <button
                                 onClick={(e) => handleQuickApprove(e, id)}
-                                disabled={approveMutation.isPending}
+                                disabled={approveMutation.isPending || !canVerifyConversion}
+                                title={!canVerifyConversion ? 'You need VERIFY_TRANSACTIONS permission.' : 'Approve'}
                                 className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
-                                title="Approve"
                               >
                                 <TickCircle size={16} />
                               </button>
-
-                              {/* Quick Reject */}
                               <button
                                 onClick={(e) => handleQuickReject(e, id)}
-                                disabled={rejectMutation.isPending}
+                                disabled={rejectMutation.isPending || !canVerifyConversion}
+                                title={!canVerifyConversion ? 'You need VERIFY_TRANSACTIONS permission.' : 'Reject'}
                                 className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                title="Reject"
                               >
                                 <CloseCircle size={16} />
                               </button>

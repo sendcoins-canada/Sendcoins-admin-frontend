@@ -131,6 +131,11 @@ api.interceptors.response.use(
 
   // Error handling
   async (error: AxiosError) => {
+    // If there is no original request config, just surface a generic error
+    if (!error.config) {
+      return Promise.reject(new Error(getErrorMessage(error)));
+    }
+
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };

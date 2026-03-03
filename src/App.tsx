@@ -29,8 +29,8 @@ import Analytics from '@/pages/Analytics';
 import BankAccounts from '@/pages/BankAccounts';
 import Merchants from '@/pages/Merchants';
 import Settings from '@/pages/Settings';
-import Security from '@/pages/Security';
 import Mail from '@/pages/Mail';
+import Security from '@/pages/Security';
 
 // =============================================================================
 // Route Components with Guards
@@ -151,7 +151,7 @@ const ProtectedRoutes = () => (
 
       {/* Mail */}
       <Route path="/mail">
-        <PermissionGuard anyOf={['VIEW_ANALYTICS', 'MANAGE_ADMINS']}>
+        <PermissionGuard anyOf={['VIEW_ANALYTICS', 'MANAGE_ADMINS', 'SEND_EMAILS']}>
           <Mail />
         </PermissionGuard>
       </Route>

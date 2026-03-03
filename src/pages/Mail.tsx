@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { emailService, SendEmailPayload, SentEmailRecord } from '@/services/emailService';
+import { emailService, SendEmailPayload, SentEmailRecord, EmailAttachmentPayload } from '@/services/emailService';
 import { teamService } from '@/services/teamService';
 import { userService } from '@/services/userService';
 import { queryKeys } from '@/lib/queryClient';
@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { usePermissions } from '@/hooks/useAuth';
 
 type RecipientFilter = 'all' | 'admin' | 'users';
 
@@ -45,6 +46,7 @@ export default function Mail() {
   const [subject, setSubject] = useState('');
   const [fromName, setFromName] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
+  const [attachments, setAttachments] = useState<EmailAttachmentPayload[]>([]);
   const [page, setPage] = useState(1);
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [viewingEmail, setViewingEmail] = useState<SentEmailRecord | null>(null);
@@ -52,6 +54,9 @@ export default function Mail() {
   const [recipientFilter, setRecipientFilter] = useState<RecipientFilter>('all');
   const [recipientSearch, setRecipientSearch] = useState('');
   const [selectedRecipients, setSelectedRecipients] = useState<RecipientOption[]>([]);
+
+  const { hasAnyPermission } = usePermissions();
+  const canSendEmail = hasAnyPermission(['MANAGE_ADMINS', 'SEND_EMAILS']);
 
   const { data: adminsData } = useQuery({
     queryKey: ['team', 'members', 'mail-picker', recipientFilter],
@@ -119,6 +124,42 @@ export default function Mail() {
     setSelectedRecipients((prev) => prev.filter((r) => r.email !== email));
   };
 
+  const handleAttachmentChange = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const next: EmailAttachmentPayload[] = [];
+    const readers: Promise<void>[] = [];
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      readers.push(
+        new Promise((resolve) => {
+          reader.onload = () => {
+            const result = reader.result;
+            if (typeof result === 'string') {
+              const base64 = result.split(',')[1] ?? '';
+              if (base64) {
+                next.push({
+                  filename: file.name,
+                  contentBase64: base64,
+                  contentType: file.type || undefined,
+                });
+              }
+            }
+            resolve();
+          };
+          reader.onerror = () => resolve();
+          reader.readAsDataURL(file);
+        }),
+      );
+    });
+
+    Promise.all(readers).then(() => {
+      if (next.length) {
+        setAttachments((prev) => [...prev, ...next]);
+      }
+    });
+  };
+
   const sendMutation = useMutation({
     mutationFn: (payload: SendEmailPayload) => emailService.send(payload),
     onSuccess: (res) => {
@@ -129,7 +170,9 @@ export default function Mail() {
         setCcInput('');
         setBccInput('');
         setSubject('');
+        setFromName('');
         setBodyHtml('');
+        setAttachments([]);
         setSelectedRecipients([]);
       } else {
         toast.error('Email was saved but delivery may have failed. Check Zepto/SMTP config.');
@@ -138,6 +181,15 @@ export default function Mail() {
     },
     onError: (e: Error) => toast.error(e.message || 'Failed to send email'),
   });
+
+  const removeAttachment = (filename: string) => {
+    setAttachments((prev) => prev.filter((a) => a.filename !== filename));
+  };
+
+  const hasRecipient =
+    selectedEmails.length > 0 || parseEmails(toInput).length > 0;
+  const hasSubject = Boolean(subject.trim());
+  const canSubmit = canSendEmail && hasRecipient && hasSubject && !sendMutation.isPending;
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: queryKeys.emails.list({ page, limit: 20 }),
@@ -170,6 +222,9 @@ export default function Mail() {
     const trimmedBody = bodyHtml.trim();
     if (trimmedBody && trimmedBody !== '<p></p>' && trimmedBody !== '<p><br></p>') {
       payload.bodyHtml = trimmedBody;
+    }
+    if (attachments.length) {
+      payload.attachments = attachments;
     }
     sendMutation.mutate(payload);
   };
@@ -365,11 +420,47 @@ export default function Mail() {
               />
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <label className="md:col-span-1 text-sm font-medium text-gray-600 pt-2">Attachments</label>
+            <div className="md:col-span-2 space-y-2">
+              <input
+                type="file"
+                multiple
+                onChange={(e) => handleAttachmentChange(e.target.files)}
+                className="block w-full text-sm text-gray-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {attachments.length > 0 && (
+                <ul className="space-y-1 text-xs text-gray-700">
+                  {attachments.map((a) => (
+                    <li key={a.filename} className="flex items-center justify-between gap-2">
+                      <span className="truncate">{a.filename}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(a.filename)}
+                        className="text-red-500 hover:text-red-600 text-xs"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
           <div className="flex justify-end pt-2">
             <button
               type="button"
               onClick={handleSend}
-              disabled={sendMutation.isPending}
+              disabled={!canSubmit}
+              title={
+                !canSendEmail
+                  ? 'You need permission to send email (MANAGE_ADMINS).'
+                  : !hasRecipient
+                  ? 'Add at least one recipient.'
+                  : !hasSubject
+                  ? 'Enter a subject.'
+                  : undefined
+              }
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               {sendMutation.isPending ? (

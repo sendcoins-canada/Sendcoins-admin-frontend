@@ -11,6 +11,7 @@ import {
 import { useDebounce } from '@/hooks/useDebounce';
 import { InviteTeamMemberModal } from '@/components/modals/InviteTeamMemberModal';
 import { CreateRoleModal } from '@/components/modals/CreateRoleModal';
+import { TeamMemberDetailModal } from '@/components/modals/TeamMemberDetailModal';
 import {
   Add,
   Refresh,
@@ -23,7 +24,7 @@ import {
   RecordCircle,
 } from 'iconsax-react';
 import type { AdminStatus } from '@/types/auth';
-import type { TeamFilters } from '@/types/team';
+import type { TeamFilters, TeamMember } from '@/types/team';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
 
@@ -90,6 +91,7 @@ export default function ManageTeam() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
   // Build filters based on search
   const filters: TeamFilters = {
@@ -316,7 +318,11 @@ export default function ManageTeam() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {members.map((member) => (
-                    <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr
+                      key={member.id}
+                      className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedMember(member)}
+                    >
                       <td className="px-6 py-4">
                         <input
                           type="checkbox"
@@ -388,7 +394,7 @@ export default function ManageTeam() {
                         <div className="flex items-center justify-end gap-1">
                           {(String(member.status).toUpperCase() === 'SUSPENDED' || String(member.status).toUpperCase() === 'INACTIVE') && (
                             <button
-                              onClick={() => handleActivate(String(member.id))}
+                              onClick={(e) => { e.stopPropagation(); handleActivate(String(member.id)); }}
                               disabled={activateMutation.isPending}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-green-50 rounded-lg text-green-700 text-xs font-medium transition-colors disabled:opacity-50"
                               title="Activate member"
@@ -400,7 +406,7 @@ export default function ManageTeam() {
                           )}
                           {String(member.status).toUpperCase() === 'ACTIVE' && (
                             <button
-                              onClick={() => handleDeactivate(String(member.id))}
+                              onClick={(e) => { e.stopPropagation(); handleDeactivate(String(member.id)); }}
                               disabled={deactivateMutation.isPending}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-amber-50 rounded-lg text-amber-700 text-xs font-medium transition-colors disabled:opacity-50"
                               title="Deactivate member"
@@ -411,7 +417,7 @@ export default function ManageTeam() {
                             </button>
                           )}
                           <button
-                            onClick={() => handleDelete(String(member.id))}
+                            onClick={(e) => { e.stopPropagation(); handleDelete(String(member.id)); }}
                             disabled={deleteMutation.isPending}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-red-50 rounded-lg text-red-700 text-xs font-medium transition-colors disabled:opacity-50"
                             title="Delete permanently"
@@ -539,6 +545,18 @@ export default function ManageTeam() {
           )
         )}
       </div>
+
+      {/* Team member detail modal */}
+      {selectedMember && (
+        <TeamMemberDetailModal
+          member={selectedMember}
+          open={!!selectedMember}
+          onOpenChange={(open) => {
+            if (!open) setSelectedMember(null);
+          }}
+          onUpdated={refetchMembers}
+        />
+      )}
 
       {/* Invite Team Member Modal */}
       <InviteTeamMemberModal

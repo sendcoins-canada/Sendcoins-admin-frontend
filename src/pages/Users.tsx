@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useUsers, useUserStats, useExportUsers } from '@/hooks/useUsers';
+import { useHasPermission } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
 import { UserDetailModal } from '@/components/modals/UserDetailModal';
 import { TableLoader } from '@/components/ui/TableLoader';
@@ -99,6 +100,8 @@ export default function Users() {
   const [kycFilter, setKycFilter] = useState<string>('all');
   const [accountTypeFilter, setAccountTypeFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
+
+  const canExportUsers = useHasPermission('EXPORT_DATA');
 
   // Build filters based on active tab and search
   const filters: UserFilters = {
@@ -230,8 +233,9 @@ export default function Users() {
           </button>
           <button
             onClick={handleExport}
-            disabled={exportMutation.isPending}
-            className="px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-colors"
+            disabled={exportMutation.isPending || !canExportUsers}
+            title={!canExportUsers ? 'You need EXPORT_DATA permission to export users.' : undefined}
+            className="px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
             <DocumentDownload size="16" />
             Export

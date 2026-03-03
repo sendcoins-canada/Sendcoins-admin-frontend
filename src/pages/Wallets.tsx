@@ -7,9 +7,11 @@ import { Refresh, Wallet, SearchNormal1, DocumentDownload, Sun1 } from 'iconsax-
 import { toast } from 'sonner';
 import { TableLoader } from '@/components/ui/TableLoader';
 import { TableEmpty } from '@/components/ui/TableEmpty';
+import { useHasPermission } from '@/hooks/useAuth';
 
 export default function Wallets() {
   const queryClient = useQueryClient();
+  const canFreezeWallets = useHasPermission('FREEZE_WALLETS');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cryptoFilter, setCryptoFilter] = useState('all');
@@ -301,7 +303,8 @@ export default function Wallets() {
                           <button
                             type="button"
                             onClick={() => unfreezeMutation.mutate({ crypto, walletId })}
-                            disabled={unfreezeMutation.isPending}
+                            disabled={unfreezeMutation.isPending || !canFreezeWallets}
+                            title={!canFreezeWallets ? 'You need FREEZE_WALLETS permission.' : undefined}
                             className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
                           >
                             <Sun1 size={14} />
@@ -314,7 +317,8 @@ export default function Wallets() {
                               const reason = window.prompt('Reason for freeze (optional):');
                               freezeMutation.mutate({ crypto, walletId, reason: reason ?? undefined });
                             }}
-                            disabled={freezeMutation.isPending}
+                            disabled={freezeMutation.isPending || !canFreezeWallets}
+                            title={!canFreezeWallets ? 'You need FREEZE_WALLETS permission.' : undefined}
                             className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50"
                           >
                             <Sun1 size={14} />

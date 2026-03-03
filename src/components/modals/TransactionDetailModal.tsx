@@ -33,6 +33,7 @@ import {
 import type { TransactionType, TransactionStatus } from '@/types/transaction';
 import { MfaVerificationModal } from './MfaVerificationModal';
 import { useMfaProtectedAction } from '@/hooks/useMfaProtectedAction';
+import { useHasPermission } from '@/hooks/useAuth';
 
 // =============================================================================
 // Types
@@ -206,7 +207,7 @@ export function TransactionDetailModal({
   // Fetch transaction data
   const { data: transaction, isLoading, refetch } = useTransaction(transactionId);
 
-  // Mutations
+  const canVerifyTx = useHasPermission('VERIFY_TRANSACTIONS');
   const flagMutation = useFlagTransaction();
   const unflagMutation = useUnflagTransaction();
   const approveMutation = useApproveTransaction();
@@ -347,16 +348,18 @@ export function TransactionDetailModal({
                 <>
                   <button
                     onClick={handleApprove}
-                    disabled={approveMutation.isPending}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-green-700"
+                    disabled={approveMutation.isPending || !canVerifyTx}
+                    title={!canVerifyTx ? 'You need VERIFY_TRANSACTIONS permission.' : undefined}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-green-700 disabled:opacity-50"
                   >
                     <TickSquare size="16" />
                     Approve
                   </button>
                   <button
                     onClick={handleReject}
-                    disabled={rejectMutation.isPending}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-red-700"
+                    disabled={rejectMutation.isPending || !canVerifyTx}
+                    title={!canVerifyTx ? 'You need VERIFY_TRANSACTIONS permission.' : undefined}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-red-700 disabled:opacity-50"
                   >
                     <CloseSquare size="16" />
                     Reject
@@ -366,8 +369,9 @@ export function TransactionDetailModal({
               {!transaction.isFlagged ? (
                 <button
                   onClick={handleFlag}
-                  disabled={flagMutation.isPending}
-                  className="flex-1 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-orange-100"
+                  disabled={flagMutation.isPending || !canVerifyTx}
+                  title={!canVerifyTx ? 'You need VERIFY_TRANSACTIONS permission.' : undefined}
+                  className="flex-1 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-orange-100 disabled:opacity-50"
                 >
                   <Flag size="16" />
                   Flag
@@ -375,8 +379,9 @@ export function TransactionDetailModal({
               ) : (
                 <button
                   onClick={handleUnflag}
-                  disabled={unflagMutation.isPending}
-                  className="flex-1 px-4 py-2 bg-gray-50 text-gray-700 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-100"
+                  disabled={unflagMutation.isPending || !canVerifyTx}
+                  title={!canVerifyTx ? 'You need VERIFY_TRANSACTIONS permission.' : undefined}
+                  className="flex-1 px-4 py-2 bg-gray-50 text-gray-700 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-100 disabled:opacity-50"
                 >
                   <Flag2 size="16" />
                   Unflag

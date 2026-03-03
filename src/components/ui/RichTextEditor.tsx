@@ -5,6 +5,8 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
 import { TextBold, TextItalic, Menu, Link2, Minus } from 'iconsax-react';
 
 interface RichTextEditorProps {
@@ -22,10 +24,16 @@ export function RichTextEditor({
   minHeight = '200px',
   className = '',
 }: RichTextEditorProps) {
+  const mergeFields = ['{{first_name}}', '{{last_name}}', '{{email}}', '{{phone}}'];
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+      }),
+      Underline,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
       }),
       Link.configure({
         openOnClick: false,
@@ -74,6 +82,29 @@ export function RichTextEditor({
       <div className="flex flex-wrap items-center gap-0.5 p-1.5 border-b border-gray-100 bg-gray-50/50">
         <button
           type="button"
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+            editor.can().undo() ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-300 cursor-not-allowed'
+          }`}
+          title="Undo"
+        >
+          ↺
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+            editor.can().redo() ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-300 cursor-not-allowed'
+          }`}
+          title="Redo"
+        >
+          ↻
+        </button>
+        <div className="w-px h-6 bg-gray-200 mx-0.5" />
+        <button
+          type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`p-2 rounded hover:bg-gray-200 transition-colors ${editor.isActive('bold') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'}`}
           title="Bold"
@@ -95,6 +126,16 @@ export function RichTextEditor({
           title="Strikethrough"
         >
           <span className="text-sm font-medium line-through">S</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className={`p-2 rounded hover:bg-gray-200 transition-colors ${
+            editor.isActive('underline') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          }`}
+          title="Underline"
+        >
+          <span className="text-sm font-medium underline">U</span>
         </button>
         <div className="w-px h-6 bg-gray-200 mx-0.5" />
         <button
@@ -147,6 +188,97 @@ export function RichTextEditor({
           "
         </button>
         <div className="w-px h-6 bg-gray-200 mx-0.5" />
+        <div className="flex items-center gap-0.5 mr-1">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            className={`px-2 py-1.5 rounded text-xs font-medium hover:bg-gray-200 transition-colors ${
+              editor.isActive({ textAlign: 'left' }) ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+            }`}
+            title="Align left"
+          >
+            L
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            className={`px-2 py-1.5 rounded text-xs font-medium hover:bg-gray-200 transition-colors ${
+              editor.isActive({ textAlign: 'center' }) ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+            }`}
+            title="Align center"
+          >
+            C
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            className={`px-2 py-1.5 rounded text-xs font-medium hover:bg-gray-200 transition-colors ${
+              editor.isActive({ textAlign: 'right' }) ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+            }`}
+            title="Align right"
+          >
+            R
+          </button>
+        </div>
+        <div className="w-px h-6 bg-gray-200 mx-0.5" />
+        <div className="flex items-center gap-0.5 mr-1">
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+            disabled={!editor.can().sinkListItem('listItem')}
+            className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+              editor.can().sinkListItem('listItem')
+                ? 'text-gray-600 hover:bg-gray-200'
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            title="Increase indent"
+          >
+            ➜
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+            disabled={!editor.can().liftListItem('listItem')}
+            className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+              editor.can().liftListItem('listItem')
+                ? 'text-gray-600 hover:bg-gray-200'
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            title="Decrease indent"
+          >
+            ⇤
+          </button>
+        </div>
+        <div className="w-px h-6 bg-gray-200 mx-0.5" />
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+          className="px-2 py-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+          title="Clear formatting"
+        >
+          Tx
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          className={`px-2 py-1.5 rounded text-xs font-medium hover:bg-gray-200 transition-colors ${
+            editor.isActive('code') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          }`}
+          title="Inline code"
+        >
+          {'</>'}
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          className={`px-2 py-1.5 rounded text-xs font-medium hover:bg-gray-200 transition-colors ${
+            editor.isActive('codeBlock') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          }`}
+          title="Code block"
+        >
+          {'</>'} block
+        </button>
+        <div className="w-px h-6 bg-gray-200 mx-0.5" />
         <button
           type="button"
           onClick={setLink}
@@ -163,6 +295,27 @@ export function RichTextEditor({
         >
           <Minus size={18} />
         </button>
+        <div className="ml-auto flex items-center gap-1">
+          <select
+            onChange={(e) => {
+              const field = e.target.value;
+              if (!field) return;
+              editor.chain().focus().insertContent(field).run();
+              e.target.value = '';
+            }}
+            className="px-2 py-1.5 rounded border border-gray-200 bg-white text-xs text-gray-600 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Insert variable...
+            </option>
+            {mergeFields.map((field) => (
+              <option key={field} value={field}>
+                {field}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Editor content */}
