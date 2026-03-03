@@ -18,7 +18,6 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermissionConfig> = {
   '/users': { anyOf: ['READ_USERS', 'SUSPEND_USERS', 'VERIFY_KYC'] },
   '/team': { permission: 'MANAGE_ADMINS' },
   '/manage-team': { permission: 'MANAGE_ADMINS' },
-  '/partners': { permission: 'VIEW_ANALYTICS' },
   '/wallets': { permission: 'READ_WALLETS' },
   '/kyc': { permission: 'VERIFY_KYC' },
   '/conversions': { anyOf: ['READ_TRANSACTIONS', 'VERIFY_TRANSACTIONS'] },

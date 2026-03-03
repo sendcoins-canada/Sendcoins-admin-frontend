@@ -20,7 +20,6 @@ import Dashboard from '@/pages/Dashboard';
 import Transactions from '@/pages/Transactions';
 import ManageTeam from '@/pages/ManageTeam';
 import Users from '@/pages/Users';
-import PartnerAccounts from '@/pages/PartnerAccounts';
 import AuditLogs from '@/pages/AuditLogs';
 import Wallets from '@/pages/Wallets';
 import KycQueue from '@/pages/KycQueue';
@@ -93,12 +92,6 @@ const ProtectedRoutes = () => (
         </PermissionGuard>
       </Route>
 
-      {/* Partner Accounts - placeholder, coming soon */}
-      <Route path="/partners">
-        <PermissionGuard permission="VIEW_ANALYTICS">
-          <PartnerAccounts />
-        </PermissionGuard>
-      </Route>
 
       {/* Wallets */}
       <Route path="/wallets">

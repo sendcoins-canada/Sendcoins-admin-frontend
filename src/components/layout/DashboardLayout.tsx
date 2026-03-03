@@ -82,7 +82,6 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         { icon: Setting2, path: '/settings', label: 'Settings' },
       ],
     },
-    { groupLabel: 'Partners', items: [{ icon: Bank, path: '/partners', label: 'Partner Accounts' }] },
   ];
 
   const navGroups = useMemo(() => {
