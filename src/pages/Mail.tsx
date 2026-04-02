@@ -187,7 +187,7 @@ export default function Mail() {
   };
 
   const hasRecipient =
-    selectedEmails.length > 0 || parseEmails(toInput).length > 0;
+    selectedEmails.length > 0 || parseEmails(toInput).length > 0 || parseEmails(ccInput).length > 0 || parseEmails(bccInput).length > 0;
   const hasSubject = Boolean(subject.trim());
   const canSubmit = canSendEmail && hasRecipient && hasSubject && !sendMutation.isPending;
 
@@ -201,9 +201,11 @@ export default function Mail() {
 
   const handleSend = () => {
     const manualTo = parseEmails(toInput);
-    const to = [...new Set([...selectedEmails, ...manualTo])];
-    if (to.length === 0) {
-      toast.error('Add at least one recipient or enter an email address');
+    const to = Array.from(new Set([...selectedEmails, ...manualTo]));
+    const cc = parseEmails(ccInput);
+    const bcc = parseEmails(bccInput);
+    if (to.length === 0 && cc.length === 0 && bcc.length === 0) {
+      toast.error('Add at least one recipient (To, Cc, or Bcc)');
       return;
     }
     if (!subject.trim()) {
@@ -215,8 +217,6 @@ export default function Mail() {
       subject: subject.trim(),
       fromName: fromName.trim() || undefined,
     };
-    const cc = parseEmails(ccInput);
-    const bcc = parseEmails(bccInput);
     if (cc.length) payload.cc = cc;
     if (bcc.length) payload.bcc = bcc;
     const trimmedBody = bodyHtml.trim();
@@ -376,24 +376,24 @@ export default function Mail() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <label className="md:col-span-1 text-sm font-medium text-gray-500 pt-2">Cc</label>
             <div className="md:col-span-2">
-              <input
-                type="text"
+              <textarea
                 value={ccInput}
                 onChange={(e) => setCcInput(e.target.value)}
-                placeholder="Optional, comma separated"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Optional (comma or newline separated)"
+                rows={1}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
               />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <label className="md:col-span-1 text-sm font-medium text-gray-500 pt-2">Bcc</label>
             <div className="md:col-span-2">
-              <input
-                type="text"
+              <textarea
                 value={bccInput}
                 onChange={(e) => setBccInput(e.target.value)}
-                placeholder="Optional, comma separated"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Optional (comma or newline separated)"
+                rows={1}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
               />
             </div>
           </div>
