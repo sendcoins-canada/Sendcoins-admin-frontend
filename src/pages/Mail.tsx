@@ -33,7 +33,7 @@ interface RecipientOption {
 
 function parseEmails(input: string): string[] {
   return input
-    .split(/[\n,;]+/)
+    .split(/[\n,;\s]+/)
     .map((e) => e.trim().toLowerCase())
     .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
 }
